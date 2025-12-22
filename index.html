@@ -357,6 +357,7 @@
 
         input[type="range"] {
             width: 100%;
+            appearance: none;
             -webkit-appearance: none;
             background: #333;
             height: 6px;
@@ -364,6 +365,7 @@
             outline: none;
         }
         input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
             -webkit-appearance: none;
             width: 22px;
             height: 22px;
@@ -439,7 +441,7 @@
         <h1>MINESEEKER</h1>
         <div class="control-group">
             <label>网格宽度: <span id="val-w">10</span></label>
-            <input type="range" id="inp-w" min="8" max="20" value="10">
+            <input type="range" id="inp-w" min="8" max="25" value="10">
         </div>
         <div class="control-group">
             <label>网格高度: <span id="val-h">15</span></label>
@@ -505,7 +507,7 @@
             document.getElementById('btn-mode-mark').classList.toggle('active', mode === 'mark');
             
             if (mode === 'detonate') {
-                guideText.textContent = "长按雷区并滑动 > 必须命中雷才能存活";
+                guideText.textContent = "左键或手指朝八个方向拖动引爆 / 电脑端右键标记";
                 guideText.style.color = "#888";
             } else {
                 guideText.textContent = "点击未知区域 > 标记或取消安全区";
@@ -685,8 +687,13 @@
             }
             loop();
         }
-
+        
+        const MAX_PARTICLES = 150;
         function spawnExplosion(cx, cy, color = CONFIG.colors.red) {
+            if (activeEffects.length > MAX_PARTICLES) {
+                return;
+            }
+            
             const particleCount = 20; 
             const pixelX = (cx + 0.5) * CONFIG.cellSize;
             const pixelY = (cy + 0.5) * CONFIG.cellSize;
@@ -797,7 +804,7 @@
                     container.classList.add('shake');
 
                 } else {
-                    this.element.textContent = this.neighborCount; 
+                    this.element.textContent = this.neighborCount === 0 ? '' : this.neighborCount;
                     this.element.dataset.num = this.neighborCount;
                     
                     if (this.neighborCount === 0) {
@@ -942,6 +949,12 @@
         }
 
         function setupInput() {
+            // 1. 禁止网格区域的浏览器默认右键菜单
+            gridEl.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                return false;
+            });
+
             const getCellCoords = (e) => {
                 const rect = gridEl.getBoundingClientRect();
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -953,21 +966,33 @@
 
             const startDrag = (e) => {
                 if (isGameOver) return;
+                
+                // 只有触摸事件才需要 preventDefault 防止滚动，鼠标左键不需要，
+                // 但为了处理右键不弹出菜单，上面已经加了 contextmenu 的监听
                 if (e.type === 'touchstart') e.preventDefault();
                 
                 const coords = getCellCoords(e);
+                
+                // 判断是否为右键点击 (鼠标右键 button 值为 2)
+                const isRightClick = e.button === 2;
+
                 if (coords.x >= 0 && coords.x < CONFIG.gridW && coords.y >= 0 && coords.y < CONFIG.gridH) {
                     const cell = gridData[coords.y][coords.x];
                     
                     if (cell.isRevealed) return; 
 
-                    if (currentMode === 'mark') {
+                    // === 修改后的逻辑核心 ===
+                    // 满足以下任一条件则执行【标记】操作：
+                    // 1. 用户点击了鼠标右键
+                    // 2. 当前本来就是“标记模式” (currentMode === 'mark')
+                    if (isRightClick || currentMode === 'mark') {
                         cell.toggleMark();
-                        return; 
+                        return; // 标记是瞬间动作，不需要后续的拖拽逻辑
                     }
 
+                    // === 下面是引爆模式的左键拖拽逻辑 ===
                     if (currentMode === 'detonate' && cell.isMarked) {
-                        return; 
+                        return; // 引爆模式下，不能拖动已标记的格子
                     }
 
                     startCell = {x: coords.x, y: coords.y};
@@ -979,6 +1004,7 @@
             };
 
             const moveDrag = (e) => {
+                // 如果是标记模式，或者刚才触发的是右键标记，则不处理拖动
                 if (!isDragging || currentMode === 'mark') return;
                 e.preventDefault(); 
             };
