@@ -174,6 +174,11 @@
             pointer-events: none;
             z-index: 5;
             mix-blend-mode: screen;
+
+            will-change: transform, opacity;
+            /* 提示浏览器这是个动态层 */
+            transform: translateZ(0);
+            /* 强制开启 GPU 加速层 */
         }
 
         .cell {
@@ -644,7 +649,7 @@
             document.getElementById('btn-mode-mark').classList.toggle('active', mode === 'mark');
 
             if (mode === 'detonate') {
-                guideText.textContent = "左键或手指朝八个方向拖动引爆 / 电脑端右键标记";
+                guideText.textContent = "左键或手指朝八个方向拖动引爆 / 电脑端右键标记安全区";
                 guideText.style.color = "#888";
             } else {
                 guideText.textContent = "点击未知区域 > 标记或取消安全区";
@@ -763,48 +768,100 @@
         }
 
         class RayEffect {
-            constructor(startX, startY, dirX, dirY, lengthCells) {
+            constructor(startX, startY, dirX, dirY, lengthCells, isFailure = false) {
                 const cs = CONFIG.cellSize;
                 this.sx = (startX + 0.5) * cs;
                 this.sy = (startY + 0.5) * cs;
                 this.ex = this.sx + (dirX * lengthCells * cs);
                 this.ey = this.sy + (dirY * lengthCells * cs);
                 this.life = 1.0;
-                this.width = 15;
-                this.color = CONFIG.colors.blue;
+                
+                this.isFailure = isFailure; 
+
+                // 生成一个基于位置的随机偏移量，用于脉冲动画，
+                // 确保每条射线的脉冲步调不一致。
+                this.pulseOffset = (this.sx + this.sy) * 0.1 + Math.random() * 10;
+
+                if (this.isFailure) {
+                    // === 失败射线参数 ===
+                    this.width = 2;       // 依然保持极细
+                    // 这里不再定义单一 color，而是在 draw 里定义血色层次
+                    this.maxJitter = 0;   //稍微增加一点抖动，配合脉冲
+                } else {
+                    // === 普通射线参数 ===
+                    this.width = 15;      
+                    this.color = CONFIG.colors.blue;
+                    this.maxJitter = 10;
+                }
+                
                 this.jitter = 0;
             }
 
             update() {
-                this.life -= 0.08;
-                this.width *= 0.9;
-                this.jitter = (Math.random() - 0.5) * 10;
+                // 失败射线的生命衰减稍微慢一点，让绝望感停留更久
+                this.life -= this.isFailure ? 0.03 : 0.08; 
+                
+                if (!this.isFailure) {
+                    this.width *= 0.9;
+                }
+                // 计算位置抖动
+                this.jitter = (Math.random() - 0.5) * this.maxJitter; 
             }
 
             draw(ctx) {
-                ctx.globalAlpha = this.life;
+                // 失败模式依然使用 lighter，让交叉点极其明亮
+                ctx.globalCompositeOperation = this.isFailure ? 'lighter' : 'screen';
                 ctx.lineCap = 'round';
-                ctx.shadowBlur = 30;
-                ctx.shadowColor = this.color;
-
+                
                 ctx.beginPath();
                 ctx.moveTo(this.sx, this.sy);
                 ctx.lineTo(this.ex + this.jitter, this.ey + this.jitter);
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = this.width * 0.4;
-                ctx.stroke();
 
-                ctx.beginPath();
-                ctx.moveTo(this.sx, this.sy);
-                ctx.lineTo(this.ex, this.ey);
-                ctx.strokeStyle = this.color;
-                ctx.lineWidth = this.width;
-                ctx.stroke();
+                if (this.isFailure) {
+                    // === 修改点：血色脉冲激光风格 ===
+                    
+                    // 计算脉冲因子：利用当前时间 + 自身偏移量计算正弦波
+                    // 速度较快 ( * 0.02 )
+                    const time = performance.now();
+                    const pulseWave = Math.sin(time * 0.02 + this.pulseOffset); 
+                    // 将正弦波(-1到1)映射到一个亮度波动范围，例如 0.6 到 1.0 之间
+                    const pulseFactor = (pulseWave * 0.2) + 0.8;
 
-                ctx.shadowBlur = 0;
+                    // 层1: 深血色外晕 (提供深邃的背景，不脉冲，稳定存在)
+                    ctx.lineWidth = 5; // 稍微宽一点点作为底色
+                    ctx.strokeStyle = '#660000'; // 深沉的干涸血色
+                    ctx.globalAlpha = this.life * 0.5; // 半透明
+                    ctx.stroke();
+
+                    // 层2: 鲜血核心 (极细，高饱和，带有脉冲效果)
+                    ctx.lineWidth = 1.5; // 极细核心
+                    // 使用鲜艳的动脉血红，而不是之前的粉白
+                    ctx.strokeStyle = '#ff0000'; 
+                    // Alpha 由生命值和脉冲因子共同决定
+                    ctx.globalAlpha = this.life * pulseFactor * 0.9; 
+                    ctx.stroke();
+
+                } else {
+                    // === 普通蓝色扫描线 (保持原样) ===
+                    ctx.lineWidth = this.width * 3; 
+                    ctx.strokeStyle = this.color;
+                    ctx.globalAlpha = this.life * 0.2; 
+                    ctx.stroke();
+
+                    ctx.lineWidth = this.width;
+                    ctx.strokeStyle = this.color;
+                    ctx.globalAlpha = this.life * 0.6;
+                    ctx.stroke();
+
+                    ctx.lineWidth = this.width * 0.3;
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.globalAlpha = this.life;
+                    ctx.stroke();
+                }
+
+                ctx.globalCompositeOperation = 'source-over';
             }
         }
-
         function startRenderLoop() {
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
 
@@ -825,11 +882,11 @@
             loop();
         }
 
-        const MAX_PARTICLES = 150;
+        //const MAX_PARTICLES = 150;
         function spawnExplosion(cx, cy, color = CONFIG.colors.red) {
-            if (activeEffects.length > MAX_PARTICLES) {
-                return;
-            }
+            //if (activeEffects.length > MAX_PARTICLES) {
+            //    return;
+            // }
 
             const particleCount = 20;
             const pixelX = (cx + 0.5) * CONFIG.cellSize;
@@ -840,8 +897,8 @@
             activeEffects.push(new Shockwave(pixelX, pixelY, color));
         }
 
-        function spawnRay(x, y, dx, dy) {
-            activeEffects.push(new RayEffect(x, y, dx, dy, CONFIG.rayLength));
+        function spawnRay(x, y, dx, dy, isFailure = false) {
+            activeEffects.push(new RayEffect(x, y, dx, dy, CONFIG.rayLength, isFailure));
         }
 
         function explodeNeighbors(x, y) {
@@ -1257,7 +1314,7 @@
                         { x: 0, y: 1 }, { x: -1, y: 1 }, { x: -1, y: 0 }, { x: -1, y: -1 }
                     ];
                     dirs.forEach(d => {
-                        spawnRay(cell.x, cell.y, d.x, d.y);
+                        spawnRay(cell.x, cell.y, d.x, d.y, true);
                         revealRayPath(cell.x, cell.y, d.x, d.y);
                     });
 
@@ -1346,7 +1403,23 @@
             initGame();
         });
 
+        // === 修改后的菜单按钮逻辑 ===
         document.getElementById('btn-ingame-menu').addEventListener('click', () => {
+            // 1. 立即结束游戏状态，防止后续点击
+            isGameOver = true;
+            
+            // 2. 如果正在进行连锁爆炸动画，立即清除定时器，防止后台卡顿或声音继续播放
+            if (window.failIntervals) {
+                window.failIntervals.forEach(id => clearTimeout(id));
+                window.failIntervals = [];
+            }
+            if (window.failTimeout) clearTimeout(window.failTimeout);
+            
+            // 3. 更新 HUD 状态
+            hudStatus.textContent = "已中断";
+            hudStatus.style.color = "#888";
+
+            // 4. 显示菜单
             menuOverlay.classList.remove('hidden');
         });
 
