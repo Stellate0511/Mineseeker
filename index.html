@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -12,7 +13,7 @@
             --cell-revealed: #050505;
             --cell-border-light: #333;
             --cell-border-dark: #111;
-            
+
             --neon-blue: #00f3ff;
             --neon-red: #ff003c;
             --neon-green: #00ff66;
@@ -35,11 +36,11 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100dvh; 
+            height: 100dvh;
             width: 100vw;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: none; 
+            touch-action: none;
         }
 
         .scanlines {
@@ -48,7 +49,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2));
             background-size: 100% 4px;
             pointer-events: none;
             z-index: 10;
@@ -68,12 +69,27 @@
         .shake {
             animation: shake-anim 0.2s ease-in-out;
         }
+
         @keyframes shake-anim {
-            0% { transform: translate(0, 0); }
-            25% { transform: translate(-3px, 3px); }
-            50% { transform: translate(3px, -3px); }
-            75% { transform: translate(-3px, -3px); }
-            100% { transform: translate(0, 0); }
+            0% {
+                transform: translate(0, 0);
+            }
+
+            25% {
+                transform: translate(-3px, 3px);
+            }
+
+            50% {
+                transform: translate(3px, -3px);
+            }
+
+            75% {
+                transform: translate(-3px, -3px);
+            }
+
+            100% {
+                transform: translate(0, 0);
+            }
         }
 
         /* 顶部 HUD */
@@ -86,16 +102,17 @@
             width: 100%;
             padding: 15px 20px;
             box-sizing: border-box;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0));
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0));
             text-shadow: 0 0 5px var(--neon-blue);
             z-index: 20;
-            pointer-events: none; /* 让下面的点击穿透，除了按钮 */
+            pointer-events: none;
+            /* 让下面的点击穿透，除了按钮 */
         }
 
         .hud-info {
             display: flex;
             gap: 20px;
-            font-size: 1rem; 
+            font-size: 1rem;
             font-weight: bold;
             flex-grow: 1;
         }
@@ -104,7 +121,8 @@
         .top-controls {
             display: flex;
             gap: 10px;
-            pointer-events: auto; /* 恢复按钮交互 */
+            pointer-events: auto;
+            /* 恢复按钮交互 */
         }
 
         .icon-btn {
@@ -121,6 +139,7 @@
             font-size: 1.2rem;
             transition: all 0.2s;
         }
+
         .icon-btn:hover {
             background: var(--neon-blue);
             color: #000;
@@ -154,13 +173,13 @@
             height: 100%;
             pointer-events: none;
             z-index: 5;
-            mix-blend-mode: screen; 
+            mix-blend-mode: screen;
         }
 
         .cell {
             background-color: var(--cell-unrevealed);
             border: 1px solid #333;
-            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.05), inset -1px -1px 0 rgba(0,0,0,0.5);
+            box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.05), inset -1px -1px 0 rgba(0, 0, 0, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -169,7 +188,7 @@
             transition: background-color 0.1s;
             position: relative;
             font-size: 1.1rem;
-            color: transparent; 
+            color: transparent;
         }
 
         .cell.active {
@@ -181,27 +200,87 @@
             background-color: var(--cell-revealed);
             border: 1px solid #111;
             box-shadow: none;
-            color: inherit; 
-            cursor: default; 
-        }
-        
-        .cell.marked::after {
-            content: '🛡';
-            color: var(--neon-green);
-            text-shadow: 0 0 5px var(--neon-green);
-            font-size: 0.8em;
-            opacity: 0.8;
+            color: inherit;
+            cursor: default;
         }
 
-        .cell[data-num="0"] { color: #222; }
-        .cell[data-num="1"] { color: var(--neon-blue); text-shadow: 0 0 8px var(--neon-blue); }
-        .cell[data-num="2"] { color: var(--neon-green); text-shadow: 0 0 8px var(--neon-green); }
-        .cell[data-num="3"] { color: var(--neon-yellow); text-shadow: 0 0 8px var(--neon-yellow); }
-        .cell[data-num="4"] { color: #ff00ff; text-shadow: 0 0 8px #ff00ff; }
-        .cell[data-num="5"] { color: var(--neon-red); text-shadow: 0 0 8px var(--neon-red); }
-        .cell[data-num="6"] { color: cyan; }
-        .cell[data-num="7"] { color: white; }
-        .cell[data-num="8"] { color: grey; }
+        .cell.marked::after {
+            content: '';
+            /* 清空文字内容 */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            /* 绝对定位居中 */
+
+            width: 60%;
+            /* 控制盾牌大小，相对于格子 */
+            height: 60%;
+
+            /* 核心技术：使用 CSS 变量作为背景色 */
+            background-color: var(--neon-green);
+
+            /* 核心技术：使用 SVG 作为遮罩来塑造形状 */
+            /* 这里使用的是选项 B (棱角盾牌) 的 URL 编码数据 */
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M21 11c0 5.55-3.84 10.74-9 12-5.16-1.26-9-6.45-9-12V5l9-4 9 4v6zm-9 10c3.75-1 7-5.46 7-9.78V6.3l-7-3.12-7 3.12v4.92c0 4.32 3.25 8.78 7 9.78z'/%3E%3C/svg%3E");
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M21 11c0 5.55-3.84 10.74-9 12-5.16-1.26-9-6.45-9-12V5l9-4 9 4v6zm-9 10c3.75-1 7-5.46 7-9.78V6.3l-7-3.12-7 3.12v4.92c0 4.32 3.25 8.78 7 9.78z'/%3E%3C/svg%3E");
+
+            -webkit-mask-size: contain;
+            mask-size: contain;
+            -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+            -webkit-mask-position: center;
+            mask-position: center;
+
+            /* 使用 box-shadow 代替 text-shadow 来制造发光效果 */
+            box-shadow: 0 0 10px var(--neon-green);
+
+            opacity: 0.9;
+            pointer-events: none;
+            /* 确保鼠标事件穿透图标打到格子上 */
+            z-index: 5;
+        }
+
+        .cell[data-num="0"] {
+            color: #222;
+        }
+
+        .cell[data-num="1"] {
+            color: var(--neon-blue);
+            text-shadow: 0 0 8px var(--neon-blue);
+        }
+
+        .cell[data-num="2"] {
+            color: var(--neon-green);
+            text-shadow: 0 0 8px var(--neon-green);
+        }
+
+        .cell[data-num="3"] {
+            color: var(--neon-yellow);
+            text-shadow: 0 0 8px var(--neon-yellow);
+        }
+
+        .cell[data-num="4"] {
+            color: #ff00ff;
+            text-shadow: 0 0 8px #ff00ff;
+        }
+
+        .cell[data-num="5"] {
+            color: var(--neon-red);
+            text-shadow: 0 0 8px var(--neon-red);
+        }
+
+        .cell[data-num="6"] {
+            color: cyan;
+        }
+
+        .cell[data-num="7"] {
+            color: white;
+        }
+
+        .cell[data-num="8"] {
+            color: grey;
+        }
 
         .cell.mine-flash {
             background-color: #fff !important;
@@ -220,9 +299,17 @@
         }
 
         @keyframes pulse-border {
-            0% { box-shadow: inset 0 0 5px rgba(255, 0, 60, 0.3); }
-            50% { box-shadow: inset 0 0 15px rgba(255, 0, 60, 0.6); }
-            100% { box-shadow: inset 0 0 5px rgba(255, 0, 60, 0.3); }
+            0% {
+                box-shadow: inset 0 0 5px rgba(255, 0, 60, 0.3);
+            }
+
+            50% {
+                box-shadow: inset 0 0 15px rgba(255, 0, 60, 0.6);
+            }
+
+            100% {
+                box-shadow: inset 0 0 5px rgba(255, 0, 60, 0.3);
+            }
         }
 
         /* 响应式工具栏 */
@@ -238,14 +325,17 @@
         /* 竖屏模式 (Portrait): 工具栏在底部 */
         @media (orientation: portrait) {
             #toolbar {
-                bottom: 60px; /* 给底部文字留点空间 */
+                bottom: 60px;
+                /* 给底部文字留点空间 */
                 left: 50%;
                 transform: translateX(-50%);
                 flex-direction: row;
             }
+
             #grid-wrapper {
                 margin: 0;
-                margin-bottom: 100px; /* 给下方工具栏留空 */
+                margin-bottom: 100px;
+                /* 给下方工具栏留空 */
             }
         }
 
@@ -257,8 +347,10 @@
                 transform: translateY(-50%);
                 flex-direction: column;
             }
+
             #grid-wrapper {
-                margin-right: 80px; /* 给右侧工具栏留空 */
+                margin-right: 80px;
+                /* 给右侧工具栏留空 */
                 margin-bottom: 0;
             }
         }
@@ -266,7 +358,7 @@
         .tool-btn {
             width: 50px;
             height: 50px;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.8);
             border: 1px solid #444;
             color: #666;
             border-radius: 8px;
@@ -276,11 +368,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: -2px 2px 10px rgba(0,0,0,0.5);
+            box-shadow: -2px 2px 10px rgba(0, 0, 0, 0.5);
             touch-action: manipulation;
         }
 
-        .tool-btn span { pointer-events: none; }
+        .tool-btn span {
+            pointer-events: none;
+        }
 
         .tool-btn.active {
             background: rgba(0, 243, 255, 0.15);
@@ -297,6 +391,31 @@
             box-shadow: 0 0 15px rgba(0, 255, 102, 0.3);
         }
 
+        #btn-mode-mark span {
+            display: inline-block;
+            width: 28px;
+            /* 设置图标宽度 */
+            height: 28px;
+            /* 设置图标高度 */
+
+            /* 核心：让背景色继承父级按钮的颜色 (灰色或霓虹绿) */
+            background-color: currentColor;
+
+            /* 使用与格子标记相同的 SVG 遮罩 */
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M21 11c0 5.55-3.84 10.74-9 12-5.16-1.26-9-6.45-9-12V5l9-4 9 4v6zm-9 10c3.75-1 7-5.46 7-9.78V6.3l-7-3.12-7 3.12v4.92c0 4.32 3.25 8.78 7 9.78z'/%3E%3C/svg%3E");
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M21 11c0 5.55-3.84 10.74-9 12-5.16-1.26-9-6.45-9-12V5l9-4 9 4v6zm-9 10c3.75-1 7-5.46 7-9.78V6.3l-7-3.12-7 3.12v4.92c0 4.32 3.25 8.78 7 9.78z'/%3E%3C/svg%3E");
+
+            -webkit-mask-size: contain;
+            mask-size: contain;
+            -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+            -webkit-mask-position: center;
+            mask-position: center;
+
+            pointer-events: none;
+            /* 保持穿透 */
+        }
+
         #guide-text {
             position: absolute;
             bottom: 20px;
@@ -309,18 +428,19 @@
             letter-spacing: 1px;
             pointer-events: none;
             text-shadow: 0 0 3px black;
-            z-index: 20; 
-            background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0));
+            z-index: 20;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0));
             padding-bottom: 5px;
         }
 
-        #menu-overlay, #game-over-overlay {
+        #menu-overlay,
+        #game-over-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.92);
+            background: rgba(0, 0, 0, 0.92);
             backdrop-filter: blur(5px);
             display: flex;
             flex-direction: column;
@@ -364,6 +484,7 @@
             border-radius: 3px;
             outline: none;
         }
+
         input[type="range"]::-webkit-slider-thumb {
             appearance: none;
             -webkit-appearance: none;
@@ -397,13 +518,28 @@
             box-shadow: 0 0 30px var(--neon-blue);
         }
 
-        .hidden { display: none !important; }
+        .hidden {
+            display: none !important;
+        }
 
-        #end-title { font-size: 2.5rem; margin-bottom: 20px; text-align: center;}
-        .win { color: var(--neon-green); text-shadow: 0 0 20px var(--neon-green); }
-        .lose { color: var(--neon-red); text-shadow: 0 0 20px var(--neon-red); }
+        #end-title {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .win {
+            color: var(--neon-green);
+            text-shadow: 0 0 20px var(--neon-green);
+        }
+
+        .lose {
+            color: var(--neon-red);
+            text-shadow: 0 0 20px var(--neon-red);
+        }
     </style>
 </head>
+
 <body>
 
     <div class="scanlines"></div>
@@ -419,7 +555,7 @@
                 <div class="icon-btn" id="btn-ingame-menu" title="菜单">☰</div>
             </div>
         </div>
-        
+
         <div id="grid-wrapper">
             <div id="grid"></div>
             <canvas id="ray-canvas"></canvas>
@@ -430,7 +566,7 @@
                 <span>⚡</span>
             </div>
             <div class="tool-btn" id="btn-mode-mark" onclick="setMode('mark')" title="标记模式">
-                <span>🛡</span>
+                <span></span>
             </div>
         </div>
 
@@ -458,7 +594,8 @@
         <h1 id="end-title">连接丢失</h1>
         <p id="end-reason" style="color:white; margin-bottom:20px; text-align:center;">逻辑错误</p>
         <button class="menu-btn" id="btn-restart">重启系统</button>
-        <button class="menu-btn" id="btn-menu" style="margin-top: 10px; font-size: 0.8rem; padding: 10px 20px;">返回菜单</button>
+        <button class="menu-btn" id="btn-menu"
+            style="margin-top: 10px; font-size: 0.8rem; padding: 10px 20px;">返回菜单</button>
     </div>
 
     <script>
@@ -466,8 +603,8 @@
             gridW: 10,
             gridH: 15,
             density: 0.3,
-            cellSize: 35, 
-            rayLength: 5, 
+            cellSize: 35,
+            rayLength: 5,
             colors: {
                 blue: '#00f3ff',
                 green: '#00ff66',
@@ -485,8 +622,8 @@
         let revealedMines = 0;
         let isFirstMove = true;
         let isGameOver = false;
-        let currentMode = 'detonate'; 
-        
+        let currentMode = 'detonate';
+
         const rayCanvas = document.getElementById('ray-canvas');
         const rayCtx = rayCanvas.getContext('2d');
         let animationFrameId;
@@ -505,7 +642,7 @@
             currentMode = mode;
             document.getElementById('btn-mode-detonate').classList.toggle('active', mode === 'detonate');
             document.getElementById('btn-mode-mark').classList.toggle('active', mode === 'mark');
-            
+
             if (mode === 'detonate') {
                 guideText.textContent = "左键或手指朝八个方向拖动引爆 / 电脑端右键标记";
                 guideText.style.color = "#888";
@@ -513,7 +650,7 @@
                 guideText.textContent = "点击未知区域 > 标记或取消安全区";
                 guideText.style.color = "var(--neon-green)";
             }
-            
+
             playSound('hover');
         }
 
@@ -571,14 +708,14 @@
                 this.x = x;
                 this.y = y;
                 const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 5 + 2; 
+                const speed = Math.random() * 5 + 2;
                 this.vx = Math.cos(angle) * speed;
                 this.vy = Math.sin(angle) * speed;
                 this.life = 1.0;
                 this.decay = Math.random() * 0.04 + 0.02;
                 this.color = color;
                 this.size = Math.random() * 4 + 2;
-                this.gravity = 0.2; 
+                this.gravity = 0.2;
             }
 
             update() {
@@ -586,7 +723,7 @@
                 this.y += this.vy;
                 this.vy += this.gravity;
                 this.life -= this.decay;
-                this.size *= 0.95; 
+                this.size *= 0.95;
             }
 
             draw(ctx) {
@@ -633,15 +770,15 @@
                 this.ex = this.sx + (dirX * lengthCells * cs);
                 this.ey = this.sy + (dirY * lengthCells * cs);
                 this.life = 1.0;
-                this.width = 15; 
+                this.width = 15;
                 this.color = CONFIG.colors.blue;
                 this.jitter = 0;
             }
 
             update() {
-                this.life -= 0.08; 
+                this.life -= 0.08;
                 this.width *= 0.9;
-                this.jitter = (Math.random() - 0.5) * 10; 
+                this.jitter = (Math.random() - 0.5) * 10;
             }
 
             draw(ctx) {
@@ -649,7 +786,7 @@
                 ctx.lineCap = 'round';
                 ctx.shadowBlur = 30;
                 ctx.shadowColor = this.color;
-                
+
                 ctx.beginPath();
                 ctx.moveTo(this.sx, this.sy);
                 ctx.lineTo(this.ex + this.jitter, this.ey + this.jitter);
@@ -664,16 +801,16 @@
                 ctx.lineWidth = this.width;
                 ctx.stroke();
 
-                ctx.shadowBlur = 0; 
+                ctx.shadowBlur = 0;
             }
         }
 
         function startRenderLoop() {
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            
+
             function loop() {
                 rayCtx.clearRect(0, 0, rayCanvas.width, rayCanvas.height);
-                
+
                 for (let i = activeEffects.length - 1; i >= 0; i--) {
                     const effect = activeEffects[i];
                     effect.update();
@@ -687,14 +824,14 @@
             }
             loop();
         }
-        
+
         const MAX_PARTICLES = 150;
         function spawnExplosion(cx, cy, color = CONFIG.colors.red) {
             if (activeEffects.length > MAX_PARTICLES) {
                 return;
             }
-            
-            const particleCount = 20; 
+
+            const particleCount = 20;
             const pixelX = (cx + 0.5) * CONFIG.cellSize;
             const pixelY = (cy + 0.5) * CONFIG.cellSize;
             for (let i = 0; i < particleCount; i++) {
@@ -711,10 +848,10 @@
             for (let dy = -1; dy <= 1; dy++) {
                 for (let dx = -1; dx <= 1; dx++) {
                     if (dx === 0 && dy === 0) continue;
-                    
+
                     const nx = x + dx;
                     const ny = y + dy;
-                    
+
                     if (nx >= 0 && nx < CONFIG.gridW && ny >= 0 && ny < CONFIG.gridH) {
                         const neighbor = gridData[ny][nx];
                         if (!neighbor.isRevealed) {
@@ -727,13 +864,13 @@
 
         function floodFill(x, y) {
             const dirs = [
-                {x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}
+                { x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }
             ];
-            
+
             for (let dir of dirs) {
                 const nx = x + dir.x;
                 const ny = y + dir.y;
-                
+
                 if (nx >= 0 && nx < CONFIG.gridW && ny >= 0 && ny < CONFIG.gridH) {
                     const neighbor = gridData[ny][nx];
                     if (!neighbor.isRevealed && !neighbor.isMine && neighbor.neighborCount === 0) {
@@ -748,7 +885,7 @@
                 const tx = startX + (dirX * i);
                 const ty = startY + (dirY * i);
                 if (tx < 0 || tx >= CONFIG.gridW || ty < 0 || ty >= CONFIG.gridH) break;
-                
+
                 const targetCell = gridData[ty][tx];
                 if (!targetCell.isMine && !targetCell.isRevealed) {
                     targetCell.reveal();
@@ -779,25 +916,25 @@
 
             reveal() {
                 if (this.isRevealed) return;
-                
+
                 this.isMarked = false;
                 this.element.classList.remove('marked');
-                
+
                 this.isRevealed = true;
                 this.element.classList.add('revealed');
-                
+
                 if (this.isMine) {
                     this.element.classList.add('mine');
-                    this.element.textContent = '☢'; 
+                    this.element.textContent = '☢';
                     this.element.dataset.num = 'mine';
-                    
+
                     this.element.classList.add('mine-flash');
                     setTimeout(() => this.element.classList.remove('mine-flash'), 150);
-                    
+
                     revealedMines++;
                     playSound('explode');
                     spawnExplosion(this.x, this.y, CONFIG.colors.red);
-                    
+
                     const container = document.getElementById('game-container');
                     container.classList.remove('shake');
                     void container.offsetWidth;
@@ -806,7 +943,7 @@
                 } else {
                     this.element.textContent = this.neighborCount === 0 ? '' : this.neighborCount;
                     this.element.dataset.num = this.neighborCount;
-                    
+
                     if (this.neighborCount === 0) {
                         floodFill(this.x, this.y);
                     } else {
@@ -838,8 +975,8 @@
             const isLandscape = window.innerWidth > window.innerHeight;
             const margin = 10;
             const hudHeight = 70;
-            const guideHeight = 40; 
-            
+            const guideHeight = 40;
+
             // 根据方向判断工具栏占用的空间
             const toolbarW = isLandscape ? 70 : 0;
             const toolbarH = isLandscape ? 0 : 80;
@@ -849,18 +986,18 @@
 
             const sizeW = Math.floor(availableWidth / CONFIG.gridW);
             const sizeH = Math.floor(availableHeight / CONFIG.gridH);
-            
-            let size = Math.min(sizeW, sizeH, 50); 
+
+            let size = Math.min(sizeW, sizeH, 50);
             size = Math.max(size, 20);
 
             CONFIG.cellSize = size;
-            
+
             const totalWidth = size * CONFIG.gridW;
             const totalHeight = size * CONFIG.gridH;
-            
+
             gridEl.style.gridTemplateColumns = `repeat(${CONFIG.gridW}, ${size}px)`;
             gridEl.style.gridTemplateRows = `repeat(${CONFIG.gridH}, ${size}px)`;
-            
+
             rayCanvas.width = totalWidth;
             rayCanvas.height = totalHeight;
 
@@ -886,20 +1023,20 @@
             while (placed < totalMines) {
                 const rx = Math.floor(Math.random() * CONFIG.gridW);
                 const ry = Math.floor(Math.random() * CONFIG.gridH);
-                
+
                 if (!gridData[ry][rx].isMine) {
                     gridData[ry][rx].isMine = true;
                     placed++;
                 }
             }
-            
+
             calculateNumbers();
         }
 
         function calculateNumbers() {
             const directions = [
-                {x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0},
-                {x:-1, y:-1}, {x:1, y:-1}, {x:-1, y:1}, {x:1, y:1}
+                { x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 },
+                { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: 1, y: 1 }
             ];
             for (let y = 0; y < CONFIG.gridH; y++) {
                 for (let x = 0; x < CONFIG.gridW; x++) {
@@ -919,12 +1056,12 @@
         function fireRay(startX, startY, dirX, dirY, delay = 0) {
             setTimeout(() => {
                 if (isGameOver) return;
-                
+
                 playSound('ray');
                 spawnRay(startX, startY, dirX, dirY);
 
                 let hitMine = false;
-                
+
                 for (let i = 1; i <= CONFIG.rayLength; i++) {
                     const tx = startX + (dirX * i);
                     const ty = startY + (dirY * i);
@@ -932,12 +1069,12 @@
                     if (tx < 0 || tx >= CONFIG.gridW || ty < 0 || ty >= CONFIG.gridH) break;
 
                     const targetCell = gridData[ty][tx];
-                    
+
                     if (targetCell.isMine) {
                         if (!targetCell.isRevealed) {
                             targetCell.reveal();
                             explodeNeighbors(tx, ty);
-                            fireRay(tx, ty, dirX, dirY, 120); 
+                            fireRay(tx, ty, dirX, dirY, 120);
                             hitMine = true;
                         }
                     } else {
@@ -961,25 +1098,25 @@
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
                 const x = Math.floor((clientX - rect.left) / CONFIG.cellSize);
                 const y = Math.floor((clientY - rect.top) / CONFIG.cellSize);
-                return {x, y, clientX, clientY};
+                return { x, y, clientX, clientY };
             };
 
             const startDrag = (e) => {
                 if (isGameOver) return;
-                
+
                 // 只有触摸事件才需要 preventDefault 防止滚动，鼠标左键不需要，
                 // 但为了处理右键不弹出菜单，上面已经加了 contextmenu 的监听
                 if (e.type === 'touchstart') e.preventDefault();
-                
+
                 const coords = getCellCoords(e);
-                
+
                 // 判断是否为右键点击 (鼠标右键 button 值为 2)
                 const isRightClick = e.button === 2;
 
                 if (coords.x >= 0 && coords.x < CONFIG.gridW && coords.y >= 0 && coords.y < CONFIG.gridH) {
                     const cell = gridData[coords.y][coords.x];
-                    
-                    if (cell.isRevealed) return; 
+
+                    if (cell.isRevealed) return;
 
                     // === 修改后的逻辑核心 ===
                     // 满足以下任一条件则执行【标记】操作：
@@ -995,10 +1132,10 @@
                         return; // 引爆模式下，不能拖动已标记的格子
                     }
 
-                    startCell = {x: coords.x, y: coords.y};
+                    startCell = { x: coords.x, y: coords.y };
                     cell.element.classList.add('active');
                     isDragging = true;
-                    dragLine = {x: coords.clientX, y: coords.clientY};
+                    dragLine = { x: coords.clientX, y: coords.clientY };
                     playSound('hover');
                 }
             };
@@ -1006,34 +1143,34 @@
             const moveDrag = (e) => {
                 // 如果是标记模式，或者刚才触发的是右键标记，则不处理拖动
                 if (!isDragging || currentMode === 'mark') return;
-                e.preventDefault(); 
+                e.preventDefault();
             };
 
             const endDrag = (e) => {
                 if (currentMode === 'mark') return;
                 if (!isDragging) return;
-                
-                const coords = e.changedTouches ? 
-                    {clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY} : 
-                    {clientX: e.clientX, clientY: e.clientY};
+
+                const coords = e.changedTouches ?
+                    { clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY } :
+                    { clientX: e.clientX, clientY: e.clientY };
 
                 const dx = coords.clientX - dragLine.x;
                 const dy = coords.clientY - dragLine.y;
-                
-                if(startCell && gridData[startCell.y] && gridData[startCell.y][startCell.x]) {
-                     gridData[startCell.y][startCell.x].element.classList.remove('active');
+
+                if (startCell && gridData[startCell.y] && gridData[startCell.y][startCell.x]) {
+                    gridData[startCell.y][startCell.x].element.classList.remove('active');
                 }
 
                 if (Math.abs(dx) > 20 || Math.abs(dy) > 20) {
                     const angle = Math.atan2(dy, dx);
                     const degree = angle * (180 / Math.PI);
                     const octant = Math.round(degree / 45);
-                    
+
                     const dirs = [
-                        {x:1, y:0}, {x:1, y:1}, {x:0, y:1}, {x:-1, y:1},
-                        {x:-1, y:0}, {x:-1, y:-1}, {x:0, y:-1}, {x:1, y:-1}
+                        { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }, { x: -1, y: 1 },
+                        { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: -1 }, { x: 1, y: -1 }
                     ];
-                    
+
                     let dirIndex = octant;
                     if (dirIndex < 0) dirIndex += 8;
                     dirIndex = dirIndex % 8;
@@ -1050,8 +1187,8 @@
             window.addEventListener('mousemove', moveDrag);
             window.addEventListener('mouseup', endDrag);
 
-            gridEl.addEventListener('touchstart', startDrag, {passive: false});
-            window.addEventListener('touchmove', moveDrag, {passive: false});
+            gridEl.addEventListener('touchstart', startDrag, { passive: false });
+            window.addEventListener('touchmove', moveDrag, { passive: false });
             window.addEventListener('touchend', endDrag);
         }
 
@@ -1083,11 +1220,11 @@
             hudStatus.textContent = "系统崩溃";
             hudStatus.style.color = "var(--neon-red)";
             playSound('error');
-            
+
             const hiddenMines = [];
-            for(let y=0; y<CONFIG.gridH; y++) {
-                for(let x=0; x<CONFIG.gridW; x++) {
-                    if(gridData[y][x].isMine && !gridData[y][x].isRevealed) {
+            for (let y = 0; y < CONFIG.gridH; y++) {
+                for (let x = 0; x < CONFIG.gridW; x++) {
+                    if (gridData[y][x].isMine && !gridData[y][x].isRevealed) {
                         hiddenMines.push(gridData[y][x]);
                     }
                 }
@@ -1111,13 +1248,13 @@
                     cell.element.textContent = '☢';
                     cell.element.classList.add('mine-flash');
                     setTimeout(() => cell.element.classList.remove('mine-flash'), 150);
-                    
+
                     playSound('explode');
                     spawnExplosion(cell.x, cell.y, CONFIG.colors.red);
-                    
+
                     const dirs = [
-                        {x:0, y:-1}, {x:1, y:-1}, {x:1, y:0}, {x:1, y:1},
-                        {x:0, y:1}, {x:-1, y:1}, {x:-1, y:0}, {x:-1, y:-1}
+                        { x: 0, y: -1 }, { x: 1, y: -1 }, { x: 1, y: 0 }, { x: 1, y: 1 },
+                        { x: 0, y: 1 }, { x: -1, y: 1 }, { x: -1, y: 0 }, { x: -1, y: -1 }
                     ];
                     dirs.forEach(d => {
                         spawnRay(cell.x, cell.y, d.x, d.y);
@@ -1133,7 +1270,7 @@
                 const overlay = document.getElementById('game-over-overlay');
                 const title = document.getElementById('end-title');
                 const reasonText = document.getElementById('end-reason');
-                
+
                 overlay.classList.remove('hidden');
                 title.textContent = "连接丢失";
                 title.className = "lose";
@@ -1153,18 +1290,18 @@
                 triggerChainFailure();
                 return;
             }
-            
+
             isGameOver = true;
             const overlay = document.getElementById('game-over-overlay');
             const title = document.getElementById('end-title');
             const reasonText = document.getElementById('end-reason');
-            
+
             title.textContent = "系统净化完成";
             title.className = "win";
             reasonText.textContent = "所有威胁已消除";
             hudStatus.textContent = "胜利";
-            playSound('hover'); 
-            
+            playSound('hover');
+
             setTimeout(() => {
                 overlay.classList.remove('hidden');
             }, 2000);
@@ -1178,10 +1315,10 @@
         const inpW = document.getElementById('inp-w');
         const inpH = document.getElementById('inp-h');
         const inpD = document.getElementById('inp-d');
-        
+
         [inpW, inpH, inpD].forEach(el => {
             el.addEventListener('input', () => {
-                document.getElementById(`val-${el.id.split('-')[1]}`).textContent = 
+                document.getElementById(`val-${el.id.split('-')[1]}`).textContent =
                     el.id === 'inp-d' ? el.value + '%' : el.value;
             });
         });
@@ -1231,4 +1368,5 @@
 
     </script>
 </body>
+
 </html>
