@@ -1690,10 +1690,9 @@
             }
 
             if (cell.isMine) {
-                if (!cell.isRevealed) {
-                    cell.reveal();
-                    explodeNeighbors(x, y);
-                }
+                cell.reveal();
+                // 现在采取的是邻居优先不链式反应的规则，可以解释为周围被炸坏了
+                explodeNeighbors(x, y);
                 fireRay(x, y, dirX, dirY);
             } else {
                 cell.element.style.backgroundColor = "var(--neon-red)";
