@@ -725,11 +725,154 @@
         .result-card.lose-theme .scan-line {
             background: var(--neon-red);
         }
+
+
+        #tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 110;
+            /* 比 menu/gameover 更高也没问题 */
+        }
+
+        .tutorial-card {
+            background: rgba(10, 10, 15, 0.9);
+            border: 1px solid var(--neon-blue);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.15), inset 0 0 20px rgba(0, 0, 0, 0.8);
+            padding: 2px;
+            width: 92%;
+            max-width: 560px;
+            backdrop-filter: blur(10px);
+        }
+
+        .tutorial-section-title {
+            color: var(--neon-green);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+        }
+
+        .tutorial-grid {
+            display: grid;
+            grid-template-columns: 92px 1fr 1fr;
+            gap: 8px 12px;
+            align-items: start;
+        }
+
+        .tutorial-col-head {
+            color: var(--neon-blue);
+            text-shadow: 0 0 8px var(--neon-blue);
+            font-weight: bold;
+            font-size: 0.9rem;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #333;
+        }
+
+        .tutorial-col-head:nth-child(1) {
+            grid-column: 2 / 3;
+        }
+
+        .tutorial-col-head:nth-child(2) {
+            grid-column: 3 / 4;
+        }
+
+        .tutorial-label {
+            color: #666;
+            font-size: 0.85rem;
+            padding-top: 4px;
+            border-bottom: 1px dashed #222;
+        }
+
+        .tutorial-item {
+            color: var(--text-main);
+            font-size: 0.9rem;
+            line-height: 1.35;
+            border-bottom: 1px dashed #222;
+            padding-bottom: 6px;
+        }
+
+        @media (max-width: 420px) {
+            .tutorial-grid {
+                grid-template-columns: 78px 1fr 1fr;
+                gap: 6px 10px;
+            }
+
+            .tutorial-item {
+                font-size: 0.85rem;
+            }
+        }
+
+        /* --- 左上角头像挂件 (窗口内) --- */
+        #profile-link {
+            position: absolute;
+            /* 调整到窗口内部左上角的合适位置 */
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px; /* 稍微缩进一点间距 */
+            text-decoration: none;
+            /* 确保在启动屏幕(z-index:100)之上 */
+            z-index: 101; 
+            transition: all 0.3s ease;
+            cursor: pointer;
+            user-select: none; -webkit-user-select: none;
+        }
+
+        #profile-link:hover {
+            filter: brightness(1.2);
+        }
+        #profile-link:hover img {
+            box-shadow: 0 0 20px #00f3ff;
+            transform: scale(1.05) rotate(5deg); /* 增加一点点旋转动感 */
+        }
+
+        #profile-link img {
+            width: 45px; /* 稍微缩小一点点以适应内部空间 */
+            height: 45px;
+            /* 核心修改：圆形蒙版 */
+            border-radius: 50%; 
+            border: 2px solid #00f3ff;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+            background: #000;
+            object-fit: cover;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .profile-info {
+            display: flex; 
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .profile-name {
+            color:  #e0fbfc;
+            font-size: 0.9rem; /* 字体稍微减小适配 */
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
+            font-family: 'Courier New', monospace;
+        }
+
+        .profile-role {
+            color: #005f73;
+            font-size: 0.6rem;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
     </style>
 </head>
 
 <body>
-
     <div class="scanlines"></div>
 
     <div id="game-container">
@@ -740,6 +883,7 @@
                 <div>状态: <span id="status-text" style="color:var(--neon-green)">就绪</span></div>
             </div>
             <div class="top-controls">
+                <div class="icon-btn" id="btn-ingame-tutorial" title="教程">?</div>
                 <div class="icon-btn" id="btn-ingame-restart" title="重开">↻</div>
                 <div class="icon-btn" id="btn-ingame-menu" title="菜单">☰</div>
             </div>
@@ -794,6 +938,13 @@
     </div>
 
     <div id="menu-overlay">
+        <a id="profile-link" href="/">
+            <img src="/avatar.jpg" alt="Avatar">
+            <div class="profile-info">
+                <span class="profile-name">回到主页</span>
+                <span class="profile-role">状态：已连接</span>
+            </div>
+        </a>
         <h1>MINESEEKER</h1>
         <div class="control-group">
             <label>网格宽度: <span id="val-w">10</span></label>
@@ -808,6 +959,63 @@
             <input type="range" id="inp-d" min="25" max="75" value="30" step="5">
         </div>
         <button class="menu-btn" id="btn-start">启动协议</button>
+        <button class="menu-btn secondary" id="btn-tutorial">查看教程</button>
+
+    </div>
+
+    <div id="tutorial-overlay" class="hidden">
+        <div class="tutorial-card">
+            <div class="card-header">
+                <h2>HOW TO PLAY</h2>
+                <div class="scan-line"></div>
+            </div>
+
+            <div class="card-body">
+                <div class="tutorial-section-title">Minesweeper vs. Mineseeker</div>
+
+                <div class="tutorial-grid">
+                    <div class="tutorial-col-head">扫雷 / MINESWEEPER</div>
+                    <div class="tutorial-col-head">找雷 / MINESEEKER</div>
+
+                    <div class="tutorial-label">目标</div>
+                    <div class="tutorial-item">找出地雷 / 开完安全格</div>
+                    <div class="tutorial-item"><b>揭示所有地雷的位置</b></div>
+
+                    <div class="tutorial-label">失败</div>
+                    <div class="tutorial-item">点到雷 = 失败</div>
+                    <div class="tutorial-item"><b>起爆点选到非雷 = 失败</b></div>
+
+                    <div class="tutorial-label">开局</div>
+                    <div class="tutorial-item">第一下必安全</div>
+                    <div class="tutorial-item"><b>第一下必是雷</b>（直接从任意点拖动开始）</div>
+
+                    <div class="tutorial-label">操作</div>
+                    <div class="tutorial-item">点击揭开 / 插旗</div>
+                    <div class="tutorial-item"><b>按住并朝八方向拖动</b>发射射线；右键/标记模式可标记</div>
+
+                    <div class="tutorial-label">爆炸规则</div>
+                    <div class="tutorial-item">爆炸后游戏结束</div>
+                    <div class="tutorial-item">
+                        <b>爆炸→冲击波→射线</b><br>
+                        ① 揭示周围8格<br>
+                        ② 射线沿拖动方向穿透<b>5格</b><br>
+                        ③ 射线命中未揭示地雷会引爆并<b>同方向连锁</b>
+                    </div>
+
+                    <div class="tutorial-label">数字</div>
+                    <div class="tutorial-item">周围8格雷数</div>
+                    <div class="tutorial-item">周围8格雷数</div>
+                </div>
+
+                <p class="flavor-text" style="margin-top:14px;">
+                    省流：<b>拖动发射射线；起爆必须命中雷；把所有雷都揭示就赢。</b>
+                </p>
+            </div>
+
+            <div class="card-actions">
+                <button class="menu-btn" id="btn-tutorial-back">返回</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1569,6 +1777,74 @@
             }, delay);
         }
 
+
+        let isPaused = false;
+        let pausedTimerWasRunning = false;
+
+        function openTutorial() {
+            const overlay = document.getElementById('tutorial-overlay');
+            overlay.classList.remove('hidden');
+
+            // 暂停输入
+            isPaused = true;
+
+            // 暂停计时（如果正在计时）
+            pausedTimerWasRunning = !!timerInterval;
+            stopTimer();
+
+            playSound('hover');
+        }
+
+        function closeTutorial() {
+            const overlay = document.getElementById('tutorial-overlay');
+            overlay.classList.add('hidden');
+
+            // 恢复输入
+            isPaused = false;
+
+            // 恢复计时（仅当游戏未结束、且之前在计时）
+            if (!isGameOver && !isFirstMove && pausedTimerWasRunning) {
+                startTimer(); // startTimer 下面会做“按 elapsedTime 续计”
+            }
+
+            pausedTimerWasRunning = false;
+            playSound('hover');
+        }
+
+        /* ✅ 小改动：让 startTimer 支持“暂停后续计”
+           用 elapsedTime 回推 gameStartTime，开局 elapsedTime=0 也不影响
+        */
+        function startTimer() {
+            if (timerInterval) return;
+
+            // ✅ 关键：支持暂停恢复
+            gameStartTime = Date.now() - (elapsedTime * 1000);
+
+            const display = document.getElementById('timer-display');
+            timerInterval = setInterval(() => {
+                const now = Date.now();
+                elapsedTime = Math.floor((now - gameStartTime) / 1000);
+                display.textContent = formatTime(elapsedTime);
+            }, 1000);
+        }
+
+        /* ✅ 绑定按钮事件（加在你现有按钮事件绑定附近） */
+        document.getElementById('btn-tutorial').addEventListener('click', () => {
+            openTutorial();
+        });
+
+        document.getElementById('btn-ingame-tutorial').addEventListener('click', () => {
+            openTutorial();
+        });
+
+        document.getElementById('btn-tutorial-back').addEventListener('click', () => {
+            closeTutorial();
+        });
+
+        document.getElementById('tutorial-overlay').addEventListener('click', (e) => {
+            if (e.target.id === 'tutorial-overlay') closeTutorial();
+        });
+
         function setupInput() {
             // 1. 禁止网格区域的浏览器默认右键菜单
             gridEl.addEventListener('contextmenu', (e) => {
@@ -1586,7 +1862,7 @@
             };
 
             const startDrag = (e) => {
-                if (isGameOver) return;
+                if (isGameOver || isPaused) return;
 
                 // 只有触摸事件才需要 preventDefault 防止滚动，鼠标左键不需要，
                 // 但为了处理右键不弹出菜单，上面已经加了 contextmenu 的监听
