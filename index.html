@@ -109,12 +109,36 @@
             /* 让下面的点击穿透，除了按钮 */
         }
 
+        /* === 修改 .hud-info === */
         .hud-info {
             display: flex;
             gap: 20px;
             font-size: 1rem;
             font-weight: bold;
             flex-grow: 1;
+            overflow: hidden;
+            /* 防止溢出 */
+        }
+
+        /* === 新增：针对内部每一个小项的样式 === */
+        .hud-info div {
+            /* 核心修复：强制不换行，让 "状态：就绪" 永远连在一起 */
+            white-space: nowrap;
+        }
+
+        /* === 新增：手机竖屏下的适配 === */
+        @media (max-width: 480px) {
+            .hud-info {
+                /* 手机屏幕窄，减小间距 */
+                gap: 8px;
+                /* 稍微减小字体，确保三个数据能排成一行 */
+                font-size: 0.85rem;
+            }
+
+            /* 如果屏幕特别小（如 iPhone SE），稍微压缩一下顶部按钮的边距 */
+            #hud {
+                padding: 10px 10px;
+            }
         }
 
         /* 顶部常驻按钮组 */
@@ -542,6 +566,165 @@
             color: var(--neon-red);
             text-shadow: 0 0 20px var(--neon-red);
         }
+
+        /* === 计时器样式 === */
+        #timer-display {
+            font-family: 'Cyber', monospace;
+            color: var(--neon-blue);
+            min-width: 60px;
+            display: inline-block;
+        }
+
+        /* === 全新的结算卡片样式 === */
+        .result-card {
+            background: rgba(10, 10, 15, 0.9);
+            border: 1px solid var(--neon-blue);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.15), inset 0 0 20px rgba(0, 0, 0, 0.8);
+            padding: 2px;
+            /* 给内边框留空 */
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            backdrop-filter: blur(10px);
+            transform: scale(0.9);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* 动画激活状态 */
+        #game-over-overlay:not(.hidden) .result-card {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .card-header {
+            background: rgba(0, 243, 255, 0.1);
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #333;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header h2 {
+            margin: 0;
+            font-size: 1.8rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* 扫描线动画 */
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--neon-blue);
+            opacity: 0.5;
+            animation: scan-down 2s linear infinite;
+        }
+
+        @keyframes scan-down {
+            0% {
+                top: 0%;
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                top: 100%;
+                opacity: 0;
+            }
+        }
+
+        .card-body {
+            padding: 20px 30px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            border-bottom: 1px dashed #333;
+            padding-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .stat-value {
+            color: var(--text-main);
+            font-weight: bold;
+            font-family: 'Cyber', monospace;
+            font-size: 1.1rem;
+        }
+
+        .flavor-text {
+            text-align: center;
+            margin-top: 20px;
+            color: #888;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        .card-actions {
+            padding: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        /* 次级按钮样式 */
+        .menu-btn.secondary {
+            background: transparent;
+            border-color: #444;
+            color: #888;
+            box-shadow: none;
+            font-size: 0.9rem;
+        }
+
+        .menu-btn.secondary:hover {
+            border-color: #fff;
+            color: #fff;
+        }
+
+        /* 胜利时的卡片配色变种 */
+        .result-card.win-theme {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 30px rgba(0, 255, 102, 0.15);
+        }
+
+        .result-card.win-theme .card-header {
+            background: rgba(0, 255, 102, 0.1);
+        }
+
+        .result-card.win-theme .scan-line {
+            background: var(--neon-green);
+        }
+
+        /* 失败时的卡片配色变种 */
+        .result-card.lose-theme {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 30px rgba(255, 0, 60, 0.15);
+        }
+
+        .result-card.lose-theme .card-header {
+            background: rgba(255, 0, 60, 0.1);
+        }
+
+        .result-card.lose-theme .scan-line {
+            background: var(--neon-red);
+        }
     </style>
 </head>
 
@@ -553,11 +736,43 @@
         <div id="hud">
             <div class="hud-info">
                 <div>目标: <span id="mines-left">0</span></div>
+                <div>时间: <span id="timer-display">00:00</span></div>
                 <div>状态: <span id="status-text" style="color:var(--neon-green)">就绪</span></div>
             </div>
             <div class="top-controls">
                 <div class="icon-btn" id="btn-ingame-restart" title="重开">↻</div>
                 <div class="icon-btn" id="btn-ingame-menu" title="菜单">☰</div>
+            </div>
+        </div>
+
+        <div id="game-over-overlay" class="hidden">
+            <div class="result-card">
+                <div class="card-header">
+                    <h2 id="end-title">MISSION COMPLETE</h2>
+                    <div class="scan-line"></div>
+                </div>
+
+                <div class="card-body">
+                    <div class="stat-row">
+                        <span class="stat-label">耗时 / TIME</span>
+                        <span class="stat-value" id="end-time">00:00</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">难度 / DIFFICULTY</span>
+                        <span class="stat-value" id="end-difficulty">NORMAL</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">完成度 / COMPLETION</span>
+                        <span class="stat-value" id="end-percentage">100%</span>
+                    </div>
+
+                    <p id="end-reason" class="flavor-text">所有威胁已消除</p>
+                </div>
+
+                <div class="card-actions">
+                    <button class="menu-btn" id="btn-restart">重启系统</button>
+                    <button class="menu-btn secondary" id="btn-menu">返回菜单</button>
+                </div>
             </div>
         </div>
 
@@ -582,25 +797,17 @@
         <h1>MINESEEKER</h1>
         <div class="control-group">
             <label>网格宽度: <span id="val-w">10</span></label>
-            <input type="range" id="inp-w" min="8" max="25" value="10">
+            <input type="range" id="inp-w" min="8" max="32" value="10">
         </div>
         <div class="control-group">
             <label>网格高度: <span id="val-h">15</span></label>
-            <input type="range" id="inp-h" min="8" max="25" value="15">
+            <input type="range" id="inp-h" min="8" max="32" value="15">
         </div>
         <div class="control-group">
             <label>地雷密度: <span id="val-d">30%</span></label>
             <input type="range" id="inp-d" min="10" max="50" value="30">
         </div>
         <button class="menu-btn" id="btn-start">启动协议</button>
-    </div>
-
-    <div id="game-over-overlay" class="hidden">
-        <h1 id="end-title">连接丢失</h1>
-        <p id="end-reason" style="color:white; margin-bottom:20px; text-align:center;">逻辑错误</p>
-        <button class="menu-btn" id="btn-restart">重启系统</button>
-        <button class="menu-btn" id="btn-menu"
-            style="margin-top: 10px; font-size: 0.8rem; padding: 10px 20px;">返回菜单</button>
     </div>
 
     <script>
@@ -629,10 +836,15 @@
         let isGameOver = false;
         let currentMode = 'detonate';
 
+        let gameStartTime = 0;
+        let timerInterval = null;
+        let elapsedTime = 0;
+
         const rayCanvas = document.getElementById('ray-canvas');
         const rayCtx = rayCanvas.getContext('2d');
         let animationFrameId;
         let activeEffects = [];
+        let comboCounter = 0;
 
         const gridEl = document.getElementById('grid');
         const hudMines = document.getElementById('mines-left');
@@ -723,12 +935,15 @@
                 this.gravity = 0.2;
             }
 
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                this.vy += this.gravity;
-                this.life -= this.decay;
-                this.size *= 0.95;
+            update(dt) {
+                const f = dt * 60;
+
+                this.x += this.vx * f;
+                this.y += this.vy * f;
+                this.vy += this.gravity * f;
+
+                this.life -= this.decay * f;
+                this.size *= Math.pow(0.95, f);
             }
 
             draw(ctx) {
@@ -739,6 +954,150 @@
                 ctx.fill();
             }
         }
+
+        class FloatingText {
+            constructor(x, y, count) {
+                const cs = CONFIG.cellSize;
+                this.baseX = (x + 0.5) * cs;
+                this.baseY = (y + 0.5) * cs;
+
+                // —— 2~10 每个都不同：文字、色相、描边、抖动、旋转、光晕强度 ——
+                const PRESET = {
+                    2: { text: 'DOUBLE', color: '#00f3ff', glow: 18, stroke: 7, size: 34, jitter: 0.8, rot: -0.10 },
+                    3: { text: 'TRIPLE', color: '#00ff66', glow: 20, stroke: 7, size: 36, jitter: 1.0, rot: 0.10 },
+                    4: { text: 'QUAD', color: '#bc13fe', glow: 22, stroke: 8, size: 40, jitter: 1.2, rot: -0.08 },
+                    5: { text: 'PENTA', color: '#fcee0a', glow: 26, stroke: 9, size: 44, jitter: 1.5, rot: 0.06 },
+                    6: { text: 'HEX', color: '#ff7a00', glow: 28, stroke: 10, size: 48, jitter: 1.8, rot: -0.05 },
+                    7: { text: 'SEPT', color: '#ff003c', glow: 30, stroke: 11, size: 52, jitter: 2.2, rot: 0.04 },
+                    8: { text: 'OCTA', color: '#ffffff', glow: 34, stroke: 12, size: 58, jitter: 2.6, rot: -0.03 },
+                    9: { text: 'NOVA', color: '#00ffff', glow: 38, stroke: 12, size: 64, jitter: 3.0, rot: 0.02 },
+                    10: { text: 'DECA+', color: '#ff00ff', glow: 44, stroke: 14, size: 72, jitter: 3.4, rot: 0.00 },
+                };
+
+                this.count = count;
+                this.p = PRESET[count] || PRESET[10];
+
+                // 让文字更“有力”：初速度更集中（上冲 + 轻微左右散射）
+                this.vx = (Math.random() - 0.5) * 2.2;
+                this.vy = -5.2 - Math.random() * 1.4;
+                this.gravity = 0.16;
+
+                // 用“时间进度”驱动动画（更稳定）
+                this.t = 0;          // 0 -> 1
+                this.duration = 0.75; // 秒
+                this.life = 1.0;     // 兼容你现有的销毁逻辑
+
+                // 旋转 & 抖动
+                this.rot = this.p.rot + (Math.random() - 0.5) * 0.06;
+                this.rotVel = (Math.random() - 0.5) * 0.012;
+
+                // 每个连击级别不同的“屏幕叠加感”
+                this.additive = count >= 7;
+
+                // 初始位置
+                this.x = this.baseX;
+                this.y = this.baseY;
+
+                // 小技巧：高连击更“弹”
+                this.pop = 1.15 + (count - 2) * 0.03;
+            }
+
+            // easing：弹性进入 + 平滑消失
+            easeOutBack(t) {
+                const c1 = 1.70158;
+                const c3 = c1 + 1;
+                return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+            }
+            easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+            update(dt) {
+                // 时间推进（0 → 1）
+                this.t += dt / this.duration;
+                if (this.t > 1) this.t = 1;
+
+                // 位移（像素/秒）
+                this.x += this.vx * dt * 60;
+                this.y += this.vy * dt * 60;
+
+                // 重力（像素/秒²）
+                this.vy += this.gravity * dt * 60;
+
+                // 空气阻力（指数衰减）
+                const drag = Math.pow(0.96, dt * 60);
+                this.vx *= drag;
+
+                // 旋转
+                this.rot += this.rotVel * dt * 60;
+
+                // 透明度
+                if (this.t < 0.55) {
+                    this.life = 1;
+                } else {
+                    this.life = Math.max(0, 1 - (this.t - 0.55) / 0.45);
+                }
+
+                // 抖动强度
+                const jStrength = (1 - this.easeOutCubic(Math.min(this.t / 0.3, 1))) * this.p.jitter;
+                this.jx = (Math.random() - 0.5) * jStrength * 2;
+                this.jy = (Math.random() - 0.5) * jStrength * 2;
+            }
+
+            draw(ctx) {
+                if (this.life <= 0) return;
+
+                // scale：前段弹出、后段微缩
+                const popT = Math.min(this.t / 0.25, 1);
+                const popScale = this.easeOutBack(popT) * this.pop;
+                const settle = this.t > 0.35 ? (1 - (this.t - 0.35) * 0.12) : 1;
+                const scale = popScale * settle;
+
+                ctx.save();
+
+                if (this.additive) ctx.globalCompositeOperation = 'lighter';
+                ctx.globalAlpha = this.life;
+
+                ctx.translate(this.x + this.jx, this.y + this.jy);
+                ctx.rotate(this.rot);
+                ctx.scale(scale, scale);
+
+                // 字体：更“游戏击杀提示”的感觉
+                ctx.font = `italic 900 ${this.p.size}px "Arial Black", "Impact", sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                // 1) 黑色厚描边（清晰度）
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = 'rgba(0,0,0,0.95)';
+                ctx.lineWidth = this.p.stroke;
+                ctx.strokeText(this.p.text, 0, 0);
+
+                // 2) 彩色外辉光（霓虹感）
+                ctx.shadowBlur = this.p.glow;
+                ctx.shadowColor = this.p.color;
+                ctx.fillStyle = this.p.color;
+                ctx.fillText(this.p.text, 0, 0);
+
+                // 3) 白色高光（立体）
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = 'rgba(255,255,255,0.35)';
+                ctx.fillText(this.p.text, -2, -2);
+
+                // 4) 超高连击：加一道“切割高光线”（更像爆发）
+                if (this.count >= 8) {
+                    ctx.globalAlpha = this.life * 0.6;
+                    ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(-this.p.size * 1.2, -this.p.size * 0.2);
+                    ctx.lineTo(this.p.size * 1.2, -this.p.size * 0.55);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+                ctx.globalCompositeOperation = 'source-over';
+            }
+        }
+
 
         class Shockwave {
             constructor(x, y, color) {
@@ -751,9 +1110,10 @@
                 this.decay = 0.08;
             }
 
-            update() {
-                this.radius += 3;
-                this.life -= this.decay;
+            update(dt) {
+                const f = dt * 60;
+                this.radius += 3 * f;
+                this.life -= this.decay * f;
             }
 
             draw(ctx) {
@@ -775,8 +1135,8 @@
                 this.ex = this.sx + (dirX * lengthCells * cs);
                 this.ey = this.sy + (dirY * lengthCells * cs);
                 this.life = 1.0;
-                
-                this.isFailure = isFailure; 
+
+                this.isFailure = isFailure;
 
                 // 生成一个基于位置的随机偏移量，用于脉冲动画，
                 // 确保每条射线的脉冲步调不一致。
@@ -789,41 +1149,42 @@
                     this.maxJitter = 0;   //稍微增加一点抖动，配合脉冲
                 } else {
                     // === 普通射线参数 ===
-                    this.width = 15;      
+                    this.width = 15;
                     this.color = CONFIG.colors.blue;
                     this.maxJitter = 10;
                 }
-                
+
                 this.jitter = 0;
             }
 
-            update() {
-                // 失败射线的生命衰减稍微慢一点，让绝望感停留更久
-                this.life -= this.isFailure ? 0.03 : 0.08; 
-                
+            update(dt) {
+                const f = dt * 60;
+
+                this.life -= (this.isFailure ? 0.03 : 0.08) * f;
+
                 if (!this.isFailure) {
-                    this.width *= 0.9;
+                    this.width *= Math.pow(0.9, f);
                 }
-                // 计算位置抖动
-                this.jitter = (Math.random() - 0.5) * this.maxJitter; 
+
+                this.jitter = (Math.random() - 0.5) * this.maxJitter;
             }
 
             draw(ctx) {
                 // 失败模式依然使用 lighter，让交叉点极其明亮
                 ctx.globalCompositeOperation = this.isFailure ? 'lighter' : 'screen';
                 ctx.lineCap = 'round';
-                
+
                 ctx.beginPath();
                 ctx.moveTo(this.sx, this.sy);
                 ctx.lineTo(this.ex + this.jitter, this.ey + this.jitter);
 
                 if (this.isFailure) {
                     // === 修改点：血色脉冲激光风格 ===
-                    
+
                     // 计算脉冲因子：利用当前时间 + 自身偏移量计算正弦波
                     // 速度较快 ( * 0.02 )
                     const time = performance.now();
-                    const pulseWave = Math.sin(time * 0.02 + this.pulseOffset); 
+                    const pulseWave = Math.sin(time * 0.02 + this.pulseOffset);
                     // 将正弦波(-1到1)映射到一个亮度波动范围，例如 0.6 到 1.0 之间
                     const pulseFactor = (pulseWave * 0.2) + 0.8;
 
@@ -836,16 +1197,16 @@
                     // 层2: 鲜血核心 (极细，高饱和，带有脉冲效果)
                     ctx.lineWidth = 1.5; // 极细核心
                     // 使用鲜艳的动脉血红，而不是之前的粉白
-                    ctx.strokeStyle = '#ff0000'; 
+                    ctx.strokeStyle = '#ff0000';
                     // Alpha 由生命值和脉冲因子共同决定
-                    ctx.globalAlpha = this.life * pulseFactor * 0.9; 
+                    ctx.globalAlpha = this.life * pulseFactor * 0.9;
                     ctx.stroke();
 
                 } else {
                     // === 普通蓝色扫描线 (保持原样) ===
-                    ctx.lineWidth = this.width * 3; 
+                    ctx.lineWidth = this.width * 3;
                     ctx.strokeStyle = this.color;
-                    ctx.globalAlpha = this.life * 0.2; 
+                    ctx.globalAlpha = this.life * 0.2;
                     ctx.stroke();
 
                     ctx.lineWidth = this.width;
@@ -865,12 +1226,17 @@
         function startRenderLoop() {
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
 
-            function loop() {
+            let lastTime = performance.now();
+
+            function loop(now) {
+                const deltaTime = Math.min((now - lastTime) / 1000, 0.05);
+                lastTime = now;
+
                 rayCtx.clearRect(0, 0, rayCanvas.width, rayCanvas.height);
 
                 for (let i = activeEffects.length - 1; i >= 0; i--) {
                     const effect = activeEffects[i];
-                    effect.update();
+                    effect.update(deltaTime);
                     effect.draw(rayCtx);
                     if (effect.life <= 0) {
                         activeEffects.splice(i, 1);
@@ -879,7 +1245,8 @@
 
                 animationFrameId = requestAnimationFrame(loop);
             }
-            loop();
+
+            animationFrameId = requestAnimationFrame(loop);
         }
 
         //const MAX_PARTICLES = 150;
@@ -1011,12 +1378,62 @@
             }
         }
 
+        function startTimer() {
+            if (timerInterval) return;
+            gameStartTime = Date.now();
+            const display = document.getElementById('timer-display');
+
+            timerInterval = setInterval(() => {
+                const now = Date.now();
+                elapsedTime = Math.floor((now - gameStartTime) / 1000);
+                display.textContent = formatTime(elapsedTime);
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function resizeCanvasToDisplaySize(canvas, cssWidth, cssHeight) {
+            const dpr = window.devicePixelRatio || 1;
+
+            // 1) 设定 CSS 尺寸（页面上看到的尺寸）
+            canvas.style.width = cssWidth + 'px';
+            canvas.style.height = cssHeight + 'px';
+
+            // 2) 设定实际像素尺寸（乘 DPR，保证清晰）
+            const displayWidth = Math.round(cssWidth * dpr);
+            const displayHeight = Math.round(cssHeight * dpr);
+
+            // 避免重复 set 造成抖动/重置状态
+            if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+                canvas.width = displayWidth;
+                canvas.height = displayHeight;
+            }
+
+            return dpr;
+        }
+
         function initGame() {
             // 清理可能的旧延时操作
             if (window.failTimeout) clearTimeout(window.failTimeout);
+            if (window.gameResultTimeout) clearTimeout(window.gameResultTimeout);
             window.failIntervals = window.failIntervals || [];
             window.failIntervals.forEach(id => clearTimeout(id));
             window.failIntervals = [];
+
+            stopTimer();
+            elapsedTime = 0;
+            document.getElementById('timer-display').textContent = "00:00";
 
             gridEl.innerHTML = '';
             gridData = [];
@@ -1055,8 +1472,10 @@
             gridEl.style.gridTemplateColumns = `repeat(${CONFIG.gridW}, ${size}px)`;
             gridEl.style.gridTemplateRows = `repeat(${CONFIG.gridH}, ${size}px)`;
 
-            rayCanvas.width = totalWidth;
-            rayCanvas.height = totalHeight;
+            const dpr = resizeCanvasToDisplaySize(rayCanvas, totalWidth, totalHeight);
+
+            // 关键：把坐标系缩回“CSS 像素”，这样你后面用的 cellSize/像素计算都不用改
+            rayCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
             for (let y = 0; y < CONFIG.gridH; y++) {
                 const row = [];
@@ -1132,6 +1551,14 @@
                             targetCell.reveal();
                             explodeNeighbors(tx, ty);
                             fireRay(tx, ty, dirX, dirY, 120);
+
+                            comboCounter++;
+                            const showCount = Math.min(comboCounter, 10);
+
+                            if (showCount >= 2) {
+                                activeEffects.push(new FloatingText(tx, ty, showCount));
+                            }
+
                             hitMine = true;
                         }
                     } else {
@@ -1253,10 +1680,13 @@
             const cell = gridData[y][x];
             if (cell.isRevealed || cell.isMarked) return;
 
+            comboCounter = 0;
+
             if (isFirstMove) {
                 generateMines(x, y);
                 isFirstMove = false;
                 hudStatus.textContent = "链接建立";
+                startTimer();
             }
 
             if (cell.isMine) {
@@ -1268,12 +1698,13 @@
             } else {
                 cell.element.style.backgroundColor = "var(--neon-red)";
                 spawnExplosion(x, y, CONFIG.colors.red);
-                triggerChainFailure();
+                gameOver(false);
             }
         }
 
+        let endDuration = 0.0;
+
         function triggerChainFailure() {
-            isGameOver = true;
             hudStatus.textContent = "系统崩溃";
             hudStatus.style.color = "var(--neon-red)";
             playSound('error');
@@ -1298,6 +1729,7 @@
 
             // 清理旧的定时器数组
             window.failIntervals = [];
+            endDuration = interval * hiddenMines.length;
 
             hiddenMines.forEach((cell, index) => {
                 const id = setTimeout(() => {
@@ -1321,18 +1753,6 @@
                 }, index * interval);
                 window.failIntervals.push(id);
             });
-
-            const totalTime = hiddenMines.length * interval + 2000;
-            window.failTimeout = setTimeout(() => {
-                const overlay = document.getElementById('game-over-overlay');
-                const title = document.getElementById('end-title');
-                const reasonText = document.getElementById('end-reason');
-
-                overlay.classList.remove('hidden');
-                title.textContent = "连接丢失";
-                title.className = "lose";
-                reasonText.textContent = "逻辑链路崩溃";
-            }, totalTime);
         }
 
         function checkWinCondition() {
@@ -1343,25 +1763,59 @@
 
         function gameOver(win, reason) {
             if (isGameOver) return;
-            if (!win) {
-                triggerChainFailure();
-                return;
-            }
+
+            stopTimer();
 
             isGameOver = true;
-            const overlay = document.getElementById('game-over-overlay');
+            if (!win) {
+                triggerChainFailure();
+                // 注意：失败时我们稍后弹出界面，但数据现在就要准备好
+            } else {
+                // 胜利直接处理
+                hudStatus.textContent = "胜利";
+                hudStatus.style.color = "var(--neon-green)";
+                playSound('hover');
+            }
+
+            // 准备界面数据
+            const card = document.querySelector('.result-card');
             const title = document.getElementById('end-title');
+            const timeDisplay = document.getElementById('end-time');
+            const diffDisplay = document.getElementById('end-difficulty');
+            const pctDisplay = document.getElementById('end-percentage');
             const reasonText = document.getElementById('end-reason');
+            const overlay = document.getElementById('game-over-overlay');
 
-            title.textContent = "系统净化完成";
-            title.className = "win";
-            reasonText.textContent = "所有威胁已消除";
-            hudStatus.textContent = "胜利";
-            playSound('hover');
+            // 设置基本数据
+            timeDisplay.textContent = formatTime(elapsedTime);
+            diffDisplay.textContent = `${CONFIG.gridW}x${CONFIG.gridH} (${Math.round(CONFIG.density * 100)}%)`;
 
-            setTimeout(() => {
+            // 移除旧主题
+            card.classList.remove('win-theme', 'lose-theme');
+
+            // 延迟显示逻辑 (为了配合爆炸动画)
+            const showDelay = win ? 1500 : (endDuration + 1500);
+
+            if (window.gameResultTimeout) clearTimeout(window.gameResultTimeout);
+
+            window.gameResultTimeout = setTimeout(() => {
+                if (win) {
+                    title.textContent = "SYSTEM PURGED";
+                    title.className = "win"; // 保持文字颜色逻辑
+                    card.classList.add('win-theme');
+                    pctDisplay.textContent = "100%";
+                    reasonText.textContent = "所有威胁已消除，系统恢复正常。";
+                } else {
+                    title.textContent = "CONNECTION LOST";
+                    title.className = "lose";
+                    card.classList.add('lose-theme');
+                    // 计算完成度
+                    const pct = Math.floor((revealedMines / totalMines) * 100);
+                    pctDisplay.textContent = `${pct}% THREATS NEUTRALIZED`;
+                    reasonText.textContent = "逻辑链路崩溃，协议执行失败。";
+                }
                 overlay.classList.remove('hidden');
-            }, 2000);
+            }, showDelay);
         }
 
         function updateHUD() {
@@ -1407,14 +1861,16 @@
         document.getElementById('btn-ingame-menu').addEventListener('click', () => {
             // 1. 立即结束游戏状态，防止后续点击
             isGameOver = true;
-            
+
             // 2. 如果正在进行连锁爆炸动画，立即清除定时器，防止后台卡顿或声音继续播放
             if (window.failIntervals) {
                 window.failIntervals.forEach(id => clearTimeout(id));
                 window.failIntervals = [];
             }
             if (window.failTimeout) clearTimeout(window.failTimeout);
-            
+
+            if (window.gameResultTimeout) clearTimeout(window.gameResultTimeout);
+
             // 3. 更新 HUD 状态
             hudStatus.textContent = "已中断";
             hudStatus.style.color = "#888";
