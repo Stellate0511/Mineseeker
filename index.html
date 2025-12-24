@@ -94,9 +94,10 @@
 
         /* 顶部 HUD */
         #hud {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
+            right: 0;
             display: flex;
             align-items: center;
             width: 100%;
@@ -106,7 +107,6 @@
             text-shadow: 0 0 5px var(--neon-blue);
             z-index: 20;
             pointer-events: none;
-            /* 让下面的点击穿透，除了按钮 */
         }
 
         /* === 修改 .hud-info === */
@@ -118,12 +118,26 @@
             flex-grow: 1;
             overflow: hidden;
             /* 防止溢出 */
+            flex-wrap: wrap;
+            min-width: 0;
         }
 
-        /* === 新增：针对内部每一个小项的样式 === */
+        /* === 针对内部每一个小项的样式 === */
         .hud-info div {
-            /* 核心修复：强制不换行，让 "状态：就绪" 永远连在一起 */
+            /* 强制不换行，让 "状态：就绪" 永远连在一起 */
             white-space: nowrap;
+        }
+
+        /* 窄屏：把第3项（状态）独占一行 */
+        @media (max-width: 420px) {
+            .hud-info {
+                gap: 8px;
+                font-size: 0.85rem;
+            }
+
+            .hud-info>div:nth-child(3) {
+                flex-basis: 100%;
+            }
         }
 
         /* === 新增：手机竖屏下的适配 === */
@@ -348,7 +362,7 @@
 
         /* 响应式工具栏 */
         #toolbar {
-            position: absolute;
+            position: fixed;
             z-index: 30;
             display: flex;
             gap: 15px;
@@ -359,33 +373,30 @@
         /* 竖屏模式 (Portrait): 工具栏在底部 */
         @media (orientation: portrait) {
             #toolbar {
-                bottom: 60px;
-                /* 给底部文字留点空间 */
+                bottom: calc(60px + env(safe-area-inset-bottom));
                 left: 50%;
                 transform: translateX(-50%);
                 flex-direction: row;
             }
 
+            /* === PATCH: 不再用 margin-bottom 推 grid === */
             #grid-wrapper {
-                margin: 0;
-                margin-bottom: 100px;
-                /* 给下方工具栏留空 */
+                margin: 0 !important;
             }
         }
 
         /* 横屏模式 (Landscape): 工具栏在右侧 */
         @media (orientation: landscape) {
             #toolbar {
-                right: 20px;
+                right: calc(20px + env(safe-area-inset-right));
                 top: 50%;
                 transform: translateY(-50%);
                 flex-direction: column;
             }
 
+            /* === PATCH: 不再用 margin-right 推 grid === */
             #grid-wrapper {
-                margin-right: 80px;
-                /* 给右侧工具栏留空 */
-                margin-bottom: 0;
+                margin: 0 !important;
             }
         }
 
@@ -451,9 +462,10 @@
         }
 
         #guide-text {
-            position: absolute;
-            bottom: 20px;
+            position: fixed;
+            bottom: calc(12px + env(safe-area-inset-bottom));
             left: 0;
+            right: 0;
             width: 100%;
             text-align: center;
             color: #888;
@@ -464,7 +476,7 @@
             text-shadow: 0 0 3px black;
             z-index: 20;
             background: linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0));
-            padding-bottom: 5px;
+            padding-bottom: 0;
         }
 
         #menu-overlay,
@@ -987,16 +999,7 @@
 
         <canvas id="ray-canvas"></canvas>
 
-        <div id="toolbar">
-            <div class="tool-btn active" id="btn-mode-detonate" onclick="setMode('detonate')" title="引爆模式">
-                <span>⚡</span>
-            </div>
-            <div class="tool-btn" id="btn-mode-mark" onclick="setMode('mark')" title="标记模式">
-                <span></span>
-            </div>
-        </div>
-
-        <div id="guide-text">长按雷区并滑动 > 必须命中雷才能存活</div>
+        <div id="guide-text">点击标记安全区<br>从格子拖动（八方向）引爆隐藏地雷</div>
     </div>
 
     <div id="menu-overlay">
@@ -1105,7 +1108,6 @@
         let revealedMines = 0;
         let isFirstMove = true;
         let isGameOver = false;
-        let currentMode = 'detonate';
 
         let gameStartTime = 0;
         let timerInterval = null;
@@ -1120,27 +1122,10 @@
         const gridEl = document.getElementById('grid');
         const hudMines = document.getElementById('mines-left');
         const hudStatus = document.getElementById('status-text');
-        const guideText = document.getElementById('guide-text');
 
         let startCell = null;
         let isDragging = false;
         let dragLine = { x: 0, y: 0 };
-
-        function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('btn-mode-detonate').classList.toggle('active', mode === 'detonate');
-            document.getElementById('btn-mode-mark').classList.toggle('active', mode === 'mark');
-
-            if (mode === 'detonate') {
-                guideText.textContent = "左键或手指朝八个方向拖动引爆 / 电脑端右键标记安全区";
-                guideText.style.color = "#888";
-            } else {
-                guideText.textContent = "点击未知区域 > 标记或取消安全区";
-                guideText.style.color = "var(--neon-green)";
-            }
-
-            playSound('hover');
-        }
 
         function playSound(type) {
             if (AUDIO_CTX.state === 'suspended') AUDIO_CTX.resume();
@@ -1846,26 +1831,36 @@
             activeEffects = [];
             hudStatus.textContent = "待命";
             hudStatus.style.color = "var(--neon-green)";
-            setMode('detonate');
 
-            // 智能计算布局
+            // === PATCH: initGame() 内部替换“智能计算布局”那一段 ===
             const isLandscape = window.innerWidth > window.innerHeight;
-            const margin = 10;
-            const hudHeight = 70;
-            const guideHeight = 40;
+            const margin = 12;
 
-            // 根据方向判断工具栏占用的空间
-            const toolbarW = isLandscape ? 70 : 0;
-            const toolbarH = isLandscape ? 0 : 80;
+            // 真实测量 HUD/Guide/Toolbar 的占用空间（避免字体/设备差异）
+            const hudRect = document.getElementById('hud').getBoundingClientRect();
+            const guideRect = document.getElementById('guide-text').getBoundingClientRect();
 
-            const availableWidth = window.innerWidth - margin - toolbarW;
-            const availableHeight = window.innerHeight - hudHeight - guideHeight - margin - toolbarH;
+            // 顶部 HUD 高度
+            const hudHeight = Math.ceil(hudRect.height);
 
+            // 底部 guide 高度
+            const guideHeight = Math.ceil(guideRect.height);
+
+            // 工具栏占用：横屏占宽，竖屏占高
+            const toolbarW = 0;
+            const toolbarH = 0;
+
+            // 可用空间（注意：HUD、Guide、Toolbar 都是 fixed 叠在视口上，所以要扣掉它们）
+            const availableWidth = window.innerWidth - toolbarW - margin * 2;
+            const availableHeight = window.innerHeight - hudHeight - guideHeight - toolbarH - margin * 2;
+
+            // 计算 cellSize：不要硬卡到 20，否则小屏会溢出
             const sizeW = Math.floor(availableWidth / CONFIG.gridW);
             const sizeH = Math.floor(availableHeight / CONFIG.gridH);
 
+            // 上限 50 保持观感，下限给到 6~8，宁愿变小也别溢出
             let size = Math.min(sizeW, sizeH, 50);
-            size = Math.max(size, 20);
+            size = Math.max(size, 6);
 
             CONFIG.cellSize = size;
 
@@ -2126,7 +2121,7 @@
         });
 
         function setupInput() {
-            // 1. 禁止网格区域的浏览器默认右键菜单
+            // 禁止网格区域默认右键菜单
             gridEl.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
                 return false;
@@ -2141,67 +2136,73 @@
                 return { x, y, clientX, clientY };
             };
 
+            // 调大阈值（至少 38px；并随格子大小略缩放）
+            const getDragThreshold = () => Math.max(38, Math.round(CONFIG.cellSize * 0.45));
+            let dragButton = 0;
             const startDrag = (e) => {
                 if (isGameOver || isPaused) return;
 
-                // 只有触摸事件才需要 preventDefault 防止滚动，鼠标左键不需要，
-                // 但为了处理右键不弹出菜单，上面已经加了 contextmenu 的监听
+                // touch 需要 preventDefault 防止页面滚动
                 if (e.type === 'touchstart') e.preventDefault();
 
                 const coords = getCellCoords(e);
+                if (coords.x < 0 || coords.x >= CONFIG.gridW || coords.y < 0 || coords.y >= CONFIG.gridH) return;
 
-                // 判断是否为右键点击 (鼠标右键 button 值为 2)
-                const isRightClick = e.button === 2;
+                const cell = gridData[coords.y][coords.x];
+                if (cell.isRevealed) return; // 已揭示不处理
 
-                if (coords.x >= 0 && coords.x < CONFIG.gridW && coords.y >= 0 && coords.y < CONFIG.gridH) {
-                    const cell = gridData[coords.y][coords.x];
+                dragButton = (e.type === 'mousedown') ? e.button : 0;
 
-                    if (cell.isRevealed) return;
+                // 记录起点，等待 end 时判断是“点”还是“拖”
+                startCell = { x: coords.x, y: coords.y };
+                isDragging = true;
+                dragLine = { x: coords.clientX, y: coords.clientY };
 
-                    // === 修改后的逻辑核心 ===
-                    // 满足以下任一条件则执行【标记】操作：
-                    // 1. 用户点击了鼠标右键
-                    // 2. 当前本来就是“标记模式” (currentMode === 'mark')
-                    if (isRightClick || currentMode === 'mark') {
-                        cell.toggleMark();
-                        return; // 标记是瞬间动作，不需要后续的拖拽逻辑
-                    }
-
-                    // === 下面是引爆模式的左键拖拽逻辑 ===
-                    if (currentMode === 'detonate' && cell.isMarked) {
-                        return; // 引爆模式下，不能拖动已标记的格子
-                    }
-
-                    startCell = { x: coords.x, y: coords.y };
-                    cell.element.classList.add('active');
-                    isDragging = true;
-                    dragLine = { x: coords.clientX, y: coords.clientY };
-                    playSound('hover');
-                }
+                cell.element.classList.add('active');
+                playSound('hover');
             };
 
             const moveDrag = (e) => {
-                // 如果是标记模式，或者刚才触发的是右键标记，则不处理拖动
-                if (!isDragging || currentMode === 'mark') return;
-                e.preventDefault();
+                if (!isDragging) return;
+                // 触摸拖动时防滚动
+                if (e.type === 'touchmove') e.preventDefault();
             };
 
             const endDrag = (e) => {
-                if (currentMode === 'mark') return;
-                if (!isDragging) return;
+                if (!isDragging || !startCell) return;
 
-                const coords = e.changedTouches ?
-                    { clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY } :
-                    { clientX: e.clientX, clientY: e.clientY };
+                const end = e.changedTouches
+                    ? { clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY }
+                    : { clientX: e.clientX, clientY: e.clientY };
 
-                const dx = coords.clientX - dragLine.x;
-                const dy = coords.clientY - dragLine.y;
+                const dx = end.clientX - dragLine.x;
+                const dy = end.clientY - dragLine.y;
+                const dist = Math.hypot(dx, dy);
 
-                if (startCell && gridData[startCell.y] && gridData[startCell.y][startCell.x]) {
-                    gridData[startCell.y][startCell.x].element.classList.remove('active');
+                const cell = gridData[startCell.y][startCell.x];
+                cell.element.classList.remove('active');
+
+                const threshold = getDragThreshold();
+
+                if (dragButton === 2) {
+                    if (dist < threshold) cell.toggleMark();
+                    // else: 什么都不做
+                    isDragging = false;
+                    startCell = null;
+                    return;
                 }
 
-                if (Math.abs(dx) > 20 || Math.abs(dy) > 20) {
+                if (dist < threshold) {
+                    // 视为点击：切换标记
+                    cell.toggleMark();
+                } else {
+                    if (cell.isMarked) {
+                        // 标记格子被认为“安全”，避免误操作
+                        isDragging = false;
+                        startCell = null;
+                        return;
+                    }
+
                     const angle = Math.atan2(dy, dx);
                     const degree = angle * (180 / Math.PI);
                     const octant = Math.round(degree / 45);
@@ -2324,7 +2325,7 @@
                     }
                 }
             }, endDuration);
-            
+
             window.failIntervals.push(finalRevealId);
         }
 
