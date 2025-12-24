@@ -3356,12 +3356,11 @@
             isGameOver = true;
 
             // 3. 清理所有可能的失败动画/延时
-            if (window.failIntervals) {
-                window.failIntervals.forEach(id => clearTimeout(id));
-                window.failIntervals = [];
-            }
             if (window.failTimeout) clearTimeout(window.failTimeout);
             if (window.gameResultTimeout) clearTimeout(window.gameResultTimeout);
+            window.failIntervals = window.failIntervals || [];
+            window.failIntervals.forEach(id => clearTimeout(id));
+            window.failIntervals = [];
 
             // 4. 更新 HUD 状态
             hudStatus.textContent = "已挂起";
