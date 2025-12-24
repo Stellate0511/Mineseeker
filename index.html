@@ -233,7 +233,7 @@
             cursor: pointer;
             transition: background-color 0.1s;
             position: relative;
-            font-size: 1.1rem;
+            font-size: clamp(8px, calc(var(--cs, 30px) * 0.55), 18px);
             color: transparent;
             transition: background-color 0.2s ease-out, color 0.2s ease-out;
         }
@@ -495,6 +495,18 @@
             z-index: 100;
         }
 
+        #menu-overlay {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            /* 覆盖 body 的 touch-action:none，让菜单能滚动 */
+            justify-content: flex-start;
+            /* 避免内容超高时“居中”导致上下都被挤没 */
+            padding-top: calc(80px + env(safe-area-inset-top));
+            padding-bottom: calc(24px + env(safe-area-inset-bottom));
+            box-sizing: border-box;
+        }
+
         h1 {
             color: var(--neon-blue);
             text-shadow: 0 0 15px var(--neon-blue);
@@ -541,27 +553,6 @@
             border-radius: 50%;
             box-shadow: 0 0 10px var(--neon-blue);
             border: 2px solid #fff;
-        }
-
-        .menu-btn {
-            margin-top: 20px;
-            padding: 12px 30px;
-            background: rgba(0, 243, 255, 0.1);
-            color: var(--neon-blue);
-            border: 2px solid var(--neon-blue);
-            font-size: 1.1rem;
-            font-family: 'Courier New', monospace;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
-            text-shadow: 0 0 5px var(--neon-blue);
-        }
-
-        .menu-btn:hover {
-            background: var(--neon-blue);
-            color: #000;
-            box-shadow: 0 0 30px var(--neon-blue);
         }
 
         .hidden {
@@ -701,20 +692,6 @@
             justify-content: center;
         }
 
-        /* 次级按钮样式 */
-        .menu-btn.secondary {
-            background: transparent;
-            border-color: #444;
-            color: #888;
-            box-shadow: none;
-            font-size: 0.9rem;
-        }
-
-        .menu-btn.secondary:hover {
-            border-color: #fff;
-            color: #fff;
-        }
-
         /* 胜利时的卡片配色变种 */
         .result-card.win-theme {
             border-color: var(--neon-green);
@@ -777,6 +754,7 @@
             flex-direction: column;
             /* 垂直排列 */
             max-height: 85vh;
+            max-height: 85dvh;
             /* 限制最大高度为视口高度的 85% */
             overflow: hidden;
             /* 防止卡片自身溢出 */
@@ -812,6 +790,7 @@
         @media (max-height: 500px) {
             .tutorial-card {
                 max-height: 95vh;
+                max-height: 95dvh;
                 /* 横屏时利用更多高度 */
             }
 
@@ -881,7 +860,9 @@
 
         /* --- 左上角头像挂件 (窗口内) --- */
         #profile-link {
-            position: absolute;
+            position: fixed;
+            top: calc(12px + env(safe-area-inset-top));
+            left: calc(12px + env(safe-area-inset-left));
             /* 调整到窗口内部左上角的合适位置 */
             top: 20px;
             left: 20px;
@@ -891,7 +872,7 @@
             /* 稍微缩进一点间距 */
             text-decoration: none;
             /* 确保在启动屏幕(z-index:100)之上 */
-            z-index: 101;
+            z-index: 120;
             transition: all 0.3s ease;
             cursor: pointer;
             user-select: none;
@@ -942,6 +923,454 @@
             letter-spacing: 2px;
             font-weight: bold;
         }
+
+        select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            outline: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.1);
+        }
+
+        select:hover {
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+        }
+
+        select option {
+            background: #000;
+            color: var(--neon-blue);
+        }
+
+        /* 包裹滑块的容器，用于整体隐藏 */
+        #custom-settings {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 调整头像位置，避免被终端挡住 */
+        #profile-link {
+            top: 15px;
+            left: 15px;
+        }
+
+        /* 1. 终端主容器 */
+        .menu-terminal {
+            background: rgba(5, 5, 10, 0.85);
+            border: 2px solid var(--neon-blue);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.15), inset 0 0 30px rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            width: 90%;
+            max-width: 800px;
+            /* 限制最大宽度，大屏更精致 */
+            backdrop-filter: blur(10px);
+            position: relative;
+            /* 切角效果 */
+            clip-path: polygon(0 0,
+                    100% 0,
+                    100% calc(100% - 20px),
+                    calc(100% - 20px) 100%,
+                    0 100%);
+        }
+
+        /* 终端四角装饰 (伪元素实现) */
+        .menu-terminal::before,
+        .menu-terminal::after {
+            content: '';
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            border: 2px solid var(--neon-blue);
+            pointer-events: none;
+        }
+
+        .menu-terminal::before {
+            top: 0;
+            left: 0;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .menu-terminal::after {
+            bottom: 0;
+            right: 0;
+            border-left: none;
+            border-top: none;
+        }
+
+        /* 2. 头部区域 */
+        .menu-header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        /* 覆盖原有的 h1 样式 */
+        .menu-header h1 {
+            margin: 0 0 10px 0;
+            font-size: 3rem;
+            letter-spacing: 8px;
+            text-shadow: 0 0 20px var(--neon-blue);
+        }
+
+        .terminal-subtitle {
+            color: var(--neon-green);
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        .deco-slash {
+            color: #444;
+            margin: 0 5px;
+        }
+
+        .header-deco-line {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+            margin-top: 15px;
+            opacity: 0.5;
+        }
+
+        /* 3. 主体区域（双栏布局） */
+        .menu-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            /* 大屏双栏 */
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        /* 4. 通用面板样式 */
+        .cyber-panel {
+            background: rgba(0, 243, 255, 0.03);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            padding: 20px;
+            position: relative;
+            min-height: 220px;
+            /* 保证两边高度大致平衡 */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-title {
+            margin: 0 0 20px 0;
+            color: var(--neon-blue);
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+            border-bottom: 1px dashed rgba(0, 243, 255, 0.2);
+            padding-bottom: 10px;
+        }
+
+        .deco-marker {
+            color: var(--neon-green);
+            margin-right: 8px;
+            font-size: 0.8rem;
+        }
+
+        /* 修改 control-group 以适应面板 */
+        .control-group.wide {
+            width: 100%;
+            max-width: none;
+            margin: 15px 0;
+            align-items: flex-start;
+            /* label 左对齐 */
+        }
+
+        /* 强化 select 样式 */
+        select {
+            background: rgba(0, 10, 20, 0.9);
+            border: 1px solid var(--neon-blue);
+            box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.1);
+            padding: 10px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        select:hover,
+        select:focus {
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+            background: rgba(0, 20, 30, 1);
+        }
+
+        /* 协议描述文本 */
+        .terminal-text {
+            margin-top: auto;
+            /* 推到底部 */
+            color: #888;
+            font-size: 0.9rem;
+            border-top: 1px solid #222;
+            padding-top: 15px;
+            text-align: left;
+            line-height: 1.5;
+        }
+
+        /* 高亮数值 */
+        .val-highlight {
+            color: var(--neon-blue);
+            font-weight: bold;
+            margin-left: 5px;
+            text-shadow: 0 0 5px var(--neon-blue);
+        }
+
+        /* 参数锁定时的占位动画 */
+        #parameter-locked {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #444;
+            font-family: 'Cyber', monospace;
+        }
+
+        #custom-settings.hidden+#parameter-locked {
+            display: flex;
+            /* 当自定义设置隐藏时，显示占位符 */
+        }
+
+        #parameter-locked {
+            display: none;
+            /* 默认隐藏 */
+        }
+
+        .blink-text {
+            animation: blink 1.5s infinite;
+            color: var(--neon-green);
+            opacity: 0.7;
+            letter-spacing: 1px;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 0.7;
+            }
+
+            50% {
+                opacity: 0.2;
+            }
+        }
+
+        .data-stream-deco {
+            width: 80%;
+            height: 2px;
+            background: repeating-linear-gradient(90deg, #444 0%, #444 5%, transparent 5%, transparent 10%);
+            margin-top: 15px;
+            animation: data-scroll 2s linear infinite;
+            opacity: 0.3;
+        }
+
+        @keyframes data-scroll {
+            from {
+                background-position: 0 0;
+            }
+
+            to {
+                background-position: 50px 0;
+            }
+        }
+
+        /* 5. 底部操作区 */
+        .menu-actions {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .menu-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: rgba(0, 243, 255, 0.1);
+            color: var(--neon-blue);
+            border: 2px solid var(--neon-blue);
+            font-size: 1.1rem;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+            text-shadow: 0 0 5px var(--neon-blue);
+        }
+
+        .menu-btn:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 30px var(--neon-blue);
+
+        }
+
+        /* 强化按钮样式 */
+        .menu-btn {
+            margin-top: 0;
+            /* 移除旧 margin */
+            flex: 1;
+            /* 按钮均分宽度 */
+            max-width: 240px;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 主要按钮 (启动) - 更大更亮 */
+        .primary-btn {
+            background: rgba(0, 243, 255, 0.15);
+            font-size: 1.3rem;
+            padding: 15px 30px;
+            border-width: 2px;
+            font-weight: bold;
+        }
+
+        .primary-btn:hover {
+            background: var(--neon-blue);
+            box-shadow: 0 0 40px var(--neon-blue);
+        }
+
+        /* 次要按钮 (教程) */
+        .secondary-btn {
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 640px) {
+            .menu-terminal {
+                width: calc(100% - 24px);
+                padding: 16px;
+                border: 0;
+                clip-path: none;
+            }
+
+            .menu-terminal::before,
+            .menu-terminal::after {
+                display: none;
+            }
+
+            .menu-header h1 {
+                font-size: 2.2rem;
+            }
+
+            .menu-body {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .cyber-panel {
+                min-height: auto;
+                padding: 15px;
+            }
+
+            .panel-title {
+                margin-bottom: 15px;
+            }
+
+            .menu-actions {
+                flex-direction: row;
+                flex-wrap: nowrap;
+                gap: 12px;
+            }
+
+            .menu-btn {
+                max-width: none;
+                flex: 1 1 0;
+                min-width: 0;
+                padding: 12px 10px;
+            }
+
+            .primary-btn {
+                font-size: 1.05rem;
+            }
+        }
+
+        /* 横屏但高度不够：整体轻微缩小，尽量不出现滚动 */
+        @media (orientation: landscape) and (max-height: 700px) {
+            .menu-terminal {
+                transform: scale(0.92);
+                transform-origin: top center;
+            }
+
+            /* 额外收紧一些“高度杀手” */
+            .menu-header {
+                margin-bottom: 18px;
+            }
+
+            .menu-body {
+                margin-bottom: 18px;
+                gap: 16px;
+            }
+
+            .cyber-panel {
+                padding: 12px;
+            }
+
+            .panel-title {
+                margin: 0 0 12px 0;
+                padding-bottom: 8px;
+            }
+        }
+
+        /* 更极端的矮横屏（分屏/小平板）：再缩一点点 */
+        @media (orientation: landscape) and (max-height: 580px) {
+            .menu-terminal {
+                transform: scale(0.86);
+            }
+        }
+
+        @media (min-height: 820px) {
+            #menu-overlay {
+                justify-content: center;
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+
+        /* ================================
+            Cyber Scrollbar（菜单 & 教程）
+        ================================ */
+
+        /* WebKit 系（Chrome / Safari / iOS / Edge） */
+        #menu-overlay::-webkit-scrollbar,
+        .tutorial-card .card-body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #menu-overlay::-webkit-scrollbar-track,
+        .tutorial-card .card-body::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.4);
+            border-left: 1px solid rgba(0, 243, 255, 0.15);
+        }
+
+        #menu-overlay::-webkit-scrollbar-thumb,
+        .tutorial-card .card-body::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg,
+                    rgba(0, 243, 255, 0.9),
+                    rgba(0, 243, 255, 0.4));
+            border-radius: 6px;
+            box-shadow:
+                0 0 8px rgba(0, 243, 255, 0.6),
+                inset 0 0 6px rgba(255, 255, 255, 0.25);
+        }
+
+        #menu-overlay::-webkit-scrollbar-thumb:hover,
+        .tutorial-card .card-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 243, 255, 1);
+        }
+
+        /* Firefox（退化但干净） */
+        #menu-overlay,
+        .tutorial-card .card-body {
+            scrollbar-width: thin;
+            scrollbar-color: var(--neon-blue) rgba(0, 0, 0, 0.4);
+        }
     </style>
 </head>
 
@@ -971,15 +1400,15 @@
 
                 <div class="card-body">
                     <div class="stat-row">
-                        <span class="stat-label">耗时 / TIME</span>
+                        <span class="stat-label">耗时</span>
                         <span class="stat-value" id="end-time">00:00</span>
                     </div>
                     <div class="stat-row">
-                        <span class="stat-label">难度 / DIFFICULTY</span>
+                        <span class="stat-label">难度</span>
                         <span class="stat-value" id="end-difficulty">NORMAL</span>
                     </div>
                     <div class="stat-row">
-                        <span class="stat-label">完成度 / COMPLETION</span>
+                        <span class="stat-label">完成度</span>
                         <span class="stat-value" id="end-percentage">100%</span>
                     </div>
 
@@ -1010,22 +1439,68 @@
                 <span class="profile-role">状态：已连接</span>
             </div>
         </a>
-        <h1>MINESEEKER</h1>
-        <div class="control-group">
-            <label>网格宽度: <span id="val-w">10</span></label>
-            <input type="range" id="inp-w" min="8" max="32" value="10">
-        </div>
-        <div class="control-group">
-            <label>网格高度: <span id="val-h">15</span></label>
-            <input type="range" id="inp-h" min="8" max="32" value="15">
-        </div>
-        <div class="control-group">
-            <label>地雷密度: <span id="val-d">30%</span></label>
-            <input type="range" id="inp-d" min="25" max="75" value="30" step="5">
-        </div>
-        <button class="menu-btn" id="btn-start">启动协议</button>
-        <button class="menu-btn secondary" id="btn-tutorial">查看教程</button>
 
+        <div class="menu-terminal">
+            <div class="menu-header">
+                <h1>MINESEEKER</h1>
+                <div class="terminal-subtitle">
+                    <span class="deco-slash">//</span> 战术寻雷系统接入终端 <span class="deco-slash">//</span>
+                </div>
+                <div class="header-deco-line"></div>
+            </div>
+
+            <div class="menu-body">
+                <div class="cyber-panel protocol-panel">
+                    <h3 class="panel-title">
+                        <span class="deco-marker">►</span> 协议装载
+                    </h3>
+                    <div class="control-group wide">
+                        <select id="difficulty-select">
+                            <option value="normal">普通协议</option>
+                            <option value="enhanced">增强协议</option>
+                            <option value="ultimate">终极协议</option>
+                            <option value="custom">自定义参数</option>
+                        </select>
+                    </div>
+                    <div id="protocol-desc" class="flavor-text terminal-text">
+                        标准寻雷任务配置。适用于初步勘探。
+                    </div>
+                </div>
+
+                <div class="cyber-panel parameter-panel">
+                    <h3 class="panel-title">
+                        <span class="deco-marker">►</span> 参数校准
+                    </h3>
+
+                    <div id="custom-settings" class="hidden">
+                        <div class="control-group wide">
+                            <label>网格宽度: <span id="val-w" class="val-highlight">10</span></label>
+                            <input type="range" id="inp-w" min="8" max="32" value="10">
+                        </div>
+                        <div class="control-group wide">
+                            <label>网格高度: <span id="val-h" class="val-highlight">15</span></label>
+                            <input type="range" id="inp-h" min="8" max="32" value="15">
+                        </div>
+                        <div class="control-group wide">
+                            <label>地雷密度: <span id="val-d" class="val-highlight">30%</span></label>
+                            <input type="range" id="inp-d" min="25" max="75" value="30" step="5">
+                        </div>
+                    </div>
+
+                    <div id="parameter-locked">
+                        <div class="locked-status">
+                            <span class="blink-text">>> 参数已锁定，等待执行 <<< </span>
+                        </div>
+                        <div class="data-stream-deco"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="menu-actions">
+                <button class="menu-btn primary-btn" id="btn-start">启动协议</button>
+                <button class="menu-btn secondary-btn" id="btn-tutorial">作战指南</button>
+            </div>
+        </div>
     </div>
 
     <div id="tutorial-overlay" class="hidden">
@@ -1073,7 +1548,7 @@
                 </div>
 
                 <p class="flavor-text" style="margin-top:14px;">
-                    省流：<b>拖动发射射线；起爆必须命中雷；把所有雷都揭示就赢。</b>
+                    省流：<b>拖动发射射线；射线起点必须是隐藏地雷；把所有雷都揭示就赢。</b>
                 </p>
             </div>
 
@@ -1225,13 +1700,14 @@
                     5: { text: 'PENTA', color: '#fcee0a', glow: 26, stroke: 9, size: 44, jitter: 1.5, rot: 0.06 },
                     6: { text: 'HEX', color: '#ff7a00', glow: 28, stroke: 10, size: 48, jitter: 1.8, rot: -0.05 },
                     7: { text: 'SEPT', color: '#ff003c', glow: 30, stroke: 11, size: 52, jitter: 2.2, rot: 0.04 },
-                    8: { text: 'OCTA', color: '#ffffff', glow: 34, stroke: 12, size: 58, jitter: 2.6, rot: -0.03 },
+                    8: { text: 'OCTA', color: '#ff00ff', glow: 34, stroke: 12, size: 58, jitter: 2.6, rot: -0.03 },
                     9: { text: 'NOVA', color: '#00ffff', glow: 38, stroke: 12, size: 64, jitter: 3.0, rot: 0.02 },
-                    10: { text: 'DECA+', color: '#ff00ff', glow: 44, stroke: 14, size: 72, jitter: 3.4, rot: 0.00 },
+                    10: { text: 'DECA+', color: '#ffffff', glow: 44, stroke: 14, size: 72, jitter: 3.4, rot: 0.00 },
                 };
 
                 this.count = count;
                 this.p = PRESET[count] || PRESET[10];
+                if (count === 10) this.p.color = PRESET[Math.floor(Math.random() * 9) + 2].color;
 
                 // 让文字更“有力”：初速度更集中（上冲 + 轻微左右散射）
                 this.vx = (Math.random() - 0.5) * 2.2;
@@ -1328,7 +1804,7 @@
                 ctx.strokeText(this.p.text, 0, 0);
 
                 // 2) 彩色外辉光（霓虹感）
-                ctx.shadowBlur = this.p.glow;
+                ctx.shadowBlur = 0;
                 ctx.shadowColor = this.p.color;
                 ctx.fillStyle = this.p.color;
                 ctx.fillText(this.p.text, 0, 0);
@@ -1863,6 +2339,7 @@
             size = Math.max(size, 6);
 
             CONFIG.cellSize = size;
+            gridEl.style.setProperty('--cs', size + 'px');
 
             const totalWidth = size * CONFIG.gridW;
             const totalHeight = size * CONFIG.gridH;
@@ -2400,19 +2877,100 @@
         const inpW = document.getElementById('inp-w');
         const inpH = document.getElementById('inp-h');
         const inpD = document.getElementById('inp-d');
+        const diffSelect = document.getElementById('difficulty-select');
+        const customSettings = document.getElementById('custom-settings');
+
+        // === 1. 定义协议参数 ===
+        const PRESETS = {
+            // 10x10, 70% 密度
+            'normal': { w: 10, h: 10, d: 70, adaptive: false },
+
+            // 15x20, 50% 密度 (开启自适应：横屏宽20，竖屏宽15)
+            'enhanced': { w: 15, h: 20, d: 50, adaptive: true },
+
+            // 30x30, 30% 密度
+            'ultimate': { w: 30, h: 30, d: 30, adaptive: false }
+        };
+
+        function getAdaptiveDimensions(baseW, baseH) {
+            const isLandscape = window.innerWidth > window.innerHeight;
+            const short = Math.min(baseW, baseH);
+            const long = Math.max(baseW, baseH);
+
+            // 如果是横屏，宽是长边；如果是竖屏，宽是短边
+            return isLandscape
+                ? { w: long, h: short }
+                : { w: short, h: long };
+        }
+
+        function updateSliderLabels() {
+            document.getElementById('val-w').textContent = inpW.value;
+            document.getElementById('val-h').textContent = inpH.value;
+            document.getElementById('val-d').textContent = inpD.value + '%';
+        }
 
         [inpW, inpH, inpD].forEach(el => {
             el.addEventListener('input', () => {
-                document.getElementById(`val-${el.id.split('-')[1]}`).textContent =
-                    el.id === 'inp-d' ? el.value + '%' : el.value;
+                updateSliderLabels();
+                // 如果用户动了滑块，自动切到自定义模式（但为了逻辑简单，这里只更新数值，模式切换由下拉框决定）
             });
         });
 
+        diffSelect.addEventListener('change', () => {
+            applyMode(diffSelect.value);
+        });
+
+        const protocolDesc = document.getElementById('protocol-desc');
+
+        // 描述文本（完全汉化，修正难度逻辑）
+        const DESCRIPTIONS = {
+            'normal': "【低风险】雷区信号极强。目标高度饱和，连锁反应极易触发。适合快速上手与压力释放。",
+
+            'enhanced': "【中风险】标准战术环境。威胁分布均衡，需在扫描与规避间寻找平衡。系统将自动适配屏幕视野。",
+
+            'ultimate': "【极高风险】静默潜行任务。目标极度稀疏，大量安全区干扰判定。任何盲目试探都将导致任务失败。",
+
+            'custom': "手动覆写系统参数。允许操作员自定义网格尺寸与威胁密度。请注意：密度越低，容错率越低。"
+        };
+
+        function applyMode(mode) {
+            if (protocolDesc && DESCRIPTIONS[mode]) {
+                protocolDesc.textContent = DESCRIPTIONS[mode];
+            }
+
+            if (mode === 'custom') {
+                // 自定义模式：显示滑块，不强制修改数值
+                customSettings.classList.remove('hidden');
+            } else if (PRESETS[mode]) {
+                // 预设模式：隐藏滑块
+                customSettings.classList.add('hidden');
+
+                const p = PRESETS[mode];
+                let targetW = p.w;
+                let targetH = p.h;
+
+                // 【关键】如果是增强协议（adaptive=true），检查当前屏幕方向
+                if (p.adaptive) {
+                    const dims = getAdaptiveDimensions(p.w, p.h);
+                    targetW = dims.w;
+                    targetH = dims.h;
+                }
+
+                inpW.value = targetW;
+                inpH.value = targetH;
+                inpD.value = p.d;
+                updateSliderLabels();
+            }
+        }
+
         document.getElementById('btn-start').addEventListener('click', () => {
+            applyMode(diffSelect.value);
+
             // 获取当前滑块的值
             const w = parseInt(inpW.value);
             const h = parseInt(inpH.value);
             const d = parseInt(inpD.value);
+            const mode = diffSelect.value;
 
             // 1. 更新全局配置
             CONFIG.gridW = w;
@@ -2420,7 +2978,7 @@
             CONFIG.density = d / 100;
 
             // 2. 步到 URL ===
-            updateURLSettings(w, h, d);
+            updateURLSettings(mode, w, h, d);
 
             // 3. 开始游戏
             menuOverlay.classList.add('hidden');
@@ -2468,6 +3026,8 @@
             // 5. 确保结算弹窗关闭，并显示主菜单
             document.getElementById('game-over-overlay').classList.add('hidden');
             menuOverlay.classList.remove('hidden');
+
+            applyMode(diffSelect.value);
         });
 
         // 监听窗口大小变化以重新计算布局（可选，简单起见直接重置可能更好，或者动态调整 grid-wrapper）
@@ -2489,68 +3049,83 @@
         function loadSettingsFromURL() {
             const params = new URLSearchParams(window.location.search);
 
-            // 检查参数是否存在：只有当宽、高、密度三个参数都有时，才视为有效配置
-            const hasParams = params.has('w') && params.has('h') && params.has('d');
+            // 1. 优先检查 mode 参数
+            if (params.has('mode')) {
+                const mode = params.get('mode');
 
-            // 辅助验证函数
-            const getSafeVal = (key, min, max, defaultVal) => {
-                if (!params.has(key)) return defaultVal;
-                const val = parseInt(params.get(key));
-                if (isNaN(val)) return defaultVal;
-                return Math.max(min, Math.min(max, val));
-            };
+                // 如果是有效预设
+                if (PRESETS[mode]) {
+                    diffSelect.value = mode;
+                    applyMode(mode);
+                    // 这里我们需要手动更新 CONFIG，因为 applyMode 只更新了 DOM
+                    CONFIG.gridW = PRESETS[mode].w;
+                    CONFIG.gridH = PRESETS[mode].h;
+                    CONFIG.density = PRESETS[mode].d / 100;
+                    return true; // 自动开始
+                }
 
-            // 读取并更新滑块 (即使参数不全，能读多少读多少)
-            const w = getSafeVal('w', 8, 32, 10);
-            const h = getSafeVal('h', 8, 32, 15);
-            const d = getSafeVal('d', 25, 75, 30);
+                // 如果是自定义模式
+                if (mode === 'custom') {
+                    diffSelect.value = 'custom';
+                    applyMode('custom');
 
-            inpW.value = w;
-            inpH.value = h;
-            inpD.value = d;
+                    // 尝试读取 w, h, d 参数
+                    if (params.has('w') && params.has('h') && params.has('d')) {
+                        const w = parseInt(params.get('w')) || 10;
+                        const h = parseInt(params.get('h')) || 15;
+                        const d = parseInt(params.get('d')) || 30;
 
-            document.getElementById('val-w').textContent = w;
-            document.getElementById('val-h').textContent = h;
-            document.getElementById('val-d').textContent = d + '%';
+                        inpW.value = w;
+                        inpH.value = h;
+                        inpD.value = d;
+                        updateSliderLabels();
 
-            // 无论是否自动开始，都先把 CONFIG 更新好
-            CONFIG.gridW = w;
-            CONFIG.gridH = h;
-            CONFIG.density = d / 100;
-
-            if (hasParams) {
-                updateURLSettings(w, h, d);
+                        CONFIG.gridW = w;
+                        CONFIG.gridH = h;
+                        CONFIG.density = d / 100;
+                        return true; // 自动开始
+                    }
+                }
             }
 
-            return hasParams; // 返回是否检测到完整参数
+            // 默认情况：如果没有 mode，或者参数不全，不做自动开始，
+            // 但我们可以初始化一下界面显示
+            applyMode('normal'); // 默认选中第一个
+            return false;
         }
 
-        // === 新增：将当前设置写入 URL (不刷新页面) ===
-        function updateURLSettings(w, h, d) {
+        function updateURLSettings(mode, w, h, d) {
             const url = new URL(window.location);
-            url.searchParams.set('w', w);
-            url.searchParams.set('h', h);
-            url.searchParams.set('d', d);
 
-            // 使用 replaceState 更新 URL 但不增加浏览器历史记录堆栈（避免按返回键回不去）
+            // 总是写入 mode
+            url.searchParams.set('mode', mode);
+
+            if (mode === 'custom') {
+                // 只有自定义模式才写入 w, h, d
+                url.searchParams.set('w', w);
+                url.searchParams.set('h', h);
+                url.searchParams.set('d', d);
+            } else {
+                // 非自定义模式，移除 w, h, d
+                url.searchParams.delete('w');
+                url.searchParams.delete('h');
+                url.searchParams.delete('d');
+            }
+
             window.history.replaceState({}, '', url);
         }
 
         function clearURLSettings() {
-            // 获取当前路径（不含查询参数）
             const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
             window.history.replaceState({}, '', cleanUrl);
         }
 
-        // 1. 读取设置，并获取是否应该自动开始
+        // 启动入口
         const shouldAutoStart = loadSettingsFromURL();
-
         if (shouldAutoStart) {
-            // 2. 如果是带参数的链接：隐藏菜单，直接开始
             menuOverlay.classList.add('hidden');
             initGame();
         } else {
-            // 3. 如果是普通访问：显示菜单（这一步其实默认HTML里就是不带hidden的，写在这里是为了逻辑清晰）
             menuOverlay.classList.remove('hidden');
         }
     </script>
