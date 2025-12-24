@@ -1055,13 +1055,13 @@
                     <div class="tutorial-item">点击揭开 / 插旗</div>
                     <div class="tutorial-item"><b>按住并朝八方向拖动</b>发射射线；右键/标记模式可标记</div>
 
-                    <div class="tutorial-label">爆炸规则</div>
+                    <div class="tutorial-label">引爆规则</div>
                     <div class="tutorial-item">爆炸后游戏结束</div>
                     <div class="tutorial-item">
-                        <b>爆炸→冲击波→射线</b><br>
+                        <b>引爆→冲击波→射线</b><br>
                         ① 揭示周围8格<br>
-                        ② 射线沿拖动方向穿透<b>4格未揭示格</b>（加上①则路径至少5格）<br>
-                        ③ 射线命中未揭示地雷会引爆并<b>同方向连锁</b><br>
+                        ② 射线沿拖动方向穿透<b>至多4格未揭示格</b>（加上①则路径至少5格）<br>
+                        ③ 射线命中未揭示地雷会朝同方向引爆，造成连锁反应</b><br>
                     </div>
 
                     <div class="tutorial-label">数字</div>
@@ -1086,7 +1086,7 @@
             gridH: 15,
             density: 0.3,
             cellSize: 35,
-            rayLength: 5,
+            rayLength: 2,
             penetrationLimit: 4, // 最大穿透未揭开格子的数量
             colors: {
                 blue: '#00f3ff',
@@ -1633,7 +1633,7 @@
                                 const neighbor = gridData[ny][nx];
 
                                 // 关键：只要没揭开，就立即在逻辑上揭开
-                                if (!neighbor.isRevealed) {
+                                if (!neighbor.isRevealed && neighbor.neighborCount === 0) {
                                     // --- 状态锁定 ---
                                     neighbor.isRevealed = true; // 锁死状态，防止再次点击
                                     neighbor.isMarked = false;  // 逻辑上去除标记
@@ -1985,15 +1985,14 @@
             let currentY = startY;
             let distance = 0;
             let unrevealedHitCount = 0;
-            const path = []; // 存储路径上经过的格子
+            const path = [];
 
             while (true) {
-                //以此前进一格
                 currentX += dirX;
                 currentY += dirY;
                 distance++;
 
-                // 1. 撞墙检测（屏幕边缘）
+                // 1. 边界检查
                 if (currentX < 0 || currentX >= CONFIG.gridW ||
                     currentY < 0 || currentY >= CONFIG.gridH) {
                     break;
@@ -2002,14 +2001,19 @@
                 const cell = gridData[currentY][currentX];
                 path.push(cell);
 
-                // 2. 穿透检测
-                // 如果格子未揭开（无论是雷还是安全），消耗一点穿透力
+                // 命中未揭示的地雷，立即停止 ===
+                // 射线能量被这颗雷吸收并引爆，它不能再往前走了。
+                // 后续的路径将由这颗雷爆炸产生的“新射线”接力完成。
+                if (cell.isMine && !cell.isRevealed) {
+                    break;
+                }
+
+                // 3. 穿透检测 (针对普通未知格子)
                 if (!cell.isRevealed) {
                     unrevealedHitCount++;
                 }
 
-                // 3. 耗尽停止
-                // 如果已经穿透了指定数量的未揭开格子，就停止
+                // 4. 耗尽停止
                 if (unrevealedHitCount >= CONFIG.penetrationLimit) {
                     break;
                 }
