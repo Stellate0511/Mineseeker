@@ -180,6 +180,7 @@
             justify-content: center;
             align-items: center;
             transition: margin 0.3s;
+            /* 这里的 position: relative 不再限制 canvas，因为 canvas 已经是 fixed 了 */
         }
 
         #grid {
@@ -190,19 +191,21 @@
         }
 
         #ray-canvas {
-            position: absolute;
+            position: fixed;
+            /* 改为 fixed 全屏 */
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             pointer-events: none;
-            z-index: 5;
+            /* 关键：让鼠标点击能穿透它点到底下的游戏 */
+            z-index: 50;
+            /* 确保它在网格之上，但在弹窗(z-index:100)之下 */
             mix-blend-mode: screen;
+            /* 保持原有的混合模式 */
 
             will-change: transform, opacity;
-            /* 提示浏览器这是个动态层 */
             transform: translateZ(0);
-            /* 强制开启 GPU 加速层 */
         }
 
         .cell {
@@ -218,6 +221,7 @@
             position: relative;
             font-size: 1.1rem;
             color: transparent;
+            transition: background-color 0.2s ease-out, color 0.2s ease-out;
         }
 
         .cell.active {
@@ -231,6 +235,7 @@
             box-shadow: none;
             color: inherit;
             cursor: default;
+            transition: background-color 0.3s ease-out;
         }
 
         .cell.marked::after {
@@ -743,14 +748,64 @@
             /* 比 menu/gameover 更高也没问题 */
         }
 
+        /* === 修改 .tutorial-card：增加弹性布局和最大高度 === */
         .tutorial-card {
             background: rgba(10, 10, 15, 0.9);
             border: 1px solid var(--neon-blue);
             box-shadow: 0 0 30px rgba(0, 243, 255, 0.15), inset 0 0 20px rgba(0, 0, 0, 0.8);
             padding: 2px;
+            /* 保持原有的 padding */
             width: 92%;
             max-width: 560px;
             backdrop-filter: blur(10px);
+
+            /* --- 新增修复代码 --- */
+            display: flex;
+            /* 开启 Flex 布局 */
+            flex-direction: column;
+            /* 垂直排列 */
+            max-height: 85vh;
+            /* 限制最大高度为视口高度的 85% */
+            overflow: hidden;
+            /* 防止卡片自身溢出 */
+        }
+
+        /* === 修改 .card-body：允许内部滚动 === */
+        .tutorial-card .card-body {
+            /* 继承原有的 padding: 20px 30px; 但建议在手机上缩小一点 */
+            padding: 20px;
+
+            /* --- 新增修复代码 --- */
+            overflow-y: auto;
+            /* 允许垂直滚动 */
+            flex: 1;
+            /* 占据剩余空间 */
+            min-height: 0;
+            /* Firefox Flex 滚动修复 */
+            -webkit-overflow-scrolling: touch;
+            /* iOS 平滑滚动 */
+        }
+
+        /* === 新增：防止标题和底部按钮被压缩 === */
+        .tutorial-card .card-header,
+        .tutorial-card .card-actions {
+            flex-shrink: 0;
+            /* 禁止压缩头部和底部 */
+            background: rgba(10, 10, 15, 0.95);
+            /* 加深背景防止文字透视重叠 */
+            z-index: 2;
+        }
+
+        /* 针对手机横屏的额外优化 */
+        @media (max-height: 500px) {
+            .tutorial-card {
+                max-height: 95vh;
+                /* 横屏时利用更多高度 */
+            }
+
+            .tutorial-card .card-body {
+                padding: 10px 20px;
+            }
         }
 
         .tutorial-section-title {
@@ -820,28 +875,33 @@
             left: 20px;
             display: flex;
             align-items: center;
-            gap: 10px; /* 稍微缩进一点间距 */
+            gap: 10px;
+            /* 稍微缩进一点间距 */
             text-decoration: none;
             /* 确保在启动屏幕(z-index:100)之上 */
-            z-index: 101; 
+            z-index: 101;
             transition: all 0.3s ease;
             cursor: pointer;
-            user-select: none; -webkit-user-select: none;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         #profile-link:hover {
             filter: brightness(1.2);
         }
+
         #profile-link:hover img {
             box-shadow: 0 0 20px #00f3ff;
-            transform: scale(1.05) rotate(5deg); /* 增加一点点旋转动感 */
+            transform: scale(1.05) rotate(5deg);
+            /* 增加一点点旋转动感 */
         }
 
         #profile-link img {
-            width: 45px; /* 稍微缩小一点点以适应内部空间 */
+            width: 45px;
+            /* 稍微缩小一点点以适应内部空间 */
             height: 45px;
             /* 核心修改：圆形蒙版 */
-            border-radius: 50%; 
+            border-radius: 50%;
             border: 2px solid #00f3ff;
             box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
             background: #000;
@@ -850,14 +910,15 @@
         }
 
         .profile-info {
-            display: flex; 
+            display: flex;
             flex-direction: column;
             gap: 2px;
         }
 
         .profile-name {
-            color:  #e0fbfc;
-            font-size: 0.9rem; /* 字体稍微减小适配 */
+            color: #e0fbfc;
+            font-size: 0.9rem;
+            /* 字体稍微减小适配 */
             font-weight: bold;
             text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
             font-family: 'Courier New', monospace;
@@ -922,8 +983,9 @@
 
         <div id="grid-wrapper">
             <div id="grid"></div>
-            <canvas id="ray-canvas"></canvas>
         </div>
+
+        <canvas id="ray-canvas"></canvas>
 
         <div id="toolbar">
             <div class="tool-btn active" id="btn-mode-detonate" onclick="setMode('detonate')" title="引爆模式">
@@ -998,8 +1060,8 @@
                     <div class="tutorial-item">
                         <b>爆炸→冲击波→射线</b><br>
                         ① 揭示周围8格<br>
-                        ② 射线沿拖动方向穿透<b>5格</b><br>
-                        ③ 射线命中未揭示地雷会引爆并<b>同方向连锁</b>
+                        ② 射线沿拖动方向穿透<b>4格未揭示格</b>（加上①则路径至少5格）<br>
+                        ③ 射线命中未揭示地雷会引爆并<b>同方向连锁</b><br>
                     </div>
 
                     <div class="tutorial-label">数字</div>
@@ -1025,6 +1087,7 @@
             density: 0.3,
             cellSize: 35,
             rayLength: 5,
+            penetrationLimit: 4, // 最大穿透未揭开格子的数量
             colors: {
                 blue: '#00f3ff',
                 green: '#00ff66',
@@ -1440,8 +1503,24 @@
                 const deltaTime = Math.min((now - lastTime) / 1000, 0.05);
                 lastTime = now;
 
+                // 1. 获取网格当前在屏幕上的实际位置
+                // 这解决了不同屏幕布局、横竖屏切换后位置不对的问题
+                const rect = gridEl.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+
+                // 2. 清空全屏画布
+                // 注意：因为 resizeCanvasToDisplaySize 会改变 canvas.width/height，
+                // 我们需要用 canvas 的实际物理像素尺寸来清空
+                rayCtx.setTransform(1, 0, 0, 1, 0, 0); // 重置矩阵以确保清空全屏
                 rayCtx.clearRect(0, 0, rayCanvas.width, rayCanvas.height);
 
+                // 3. 设置绘制矩阵：
+                // 缩放 (dpr) + 平移 (rect.left, rect.top)
+                // 还要加上 padding (4px) 的偏移，因为 grid-wrapper 有 padding
+                // 如果你的 rect 是取自 #grid 元素本身，就不需要加 padding，直接用 rect.left
+                rayCtx.setTransform(dpr, 0, 0, dpr, rect.left * dpr, rect.top * dpr);
+
+                // --- 下面的绘制逻辑完全不用动 ---
                 for (let i = activeEffects.length - 1; i >= 0; i--) {
                     const effect = activeEffects[i];
                     effect.update(deltaTime);
@@ -1472,8 +1551,9 @@
             activeEffects.push(new Shockwave(pixelX, pixelY, color));
         }
 
-        function spawnRay(x, y, dx, dy, isFailure = false) {
-            activeEffects.push(new RayEffect(x, y, dx, dy, CONFIG.rayLength, isFailure));
+        // 修改：增加了 length 参数，默认为 null
+        function spawnRay(x, y, dx, dy, length = null, isFailure = false) {
+            activeEffects.push(new RayEffect(x, y, dx, dy, Math.max(CONFIG.rayLength, length), isFailure));
         }
 
         function explodeNeighbors(x, y) {
@@ -1510,6 +1590,104 @@
                     }
                 }
             }
+        }
+
+        function animatedFloodFill(startX, startY) {
+            // 1. 定义 BFS 结构
+            const queue = [{ x: startX, y: startY, dist: 0 }];
+            const visited = new Set();
+            visited.add(`${startX},${startY}`);
+
+            // 这个数组用来存 { cell, dist }，用于稍后生成动画
+            const animationQueue = [];
+
+            const dirs = [
+                { x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 },
+                { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: 1, y: 1 }
+            ];
+
+            // 2. === 阶段一：同步逻辑处理（瞬间完成） ===
+            // 在这个循环里，我们只修改数据状态 (isRevealed)，不操作 DOM
+            let head = 0;
+            while (head < queue.length) {
+                const { x, y, dist } = queue[head++];
+                const currentCell = gridData[y][x];
+
+                // 如果不是起点（起点在 cell.reveal 里已经处理了），记录下来做动画
+                if (dist > 0) {
+                    animationQueue.push({ cell: currentCell, dist: dist });
+                }
+
+                // 如果当前格子是空地 (0)，则继续扩散
+                // 注意：这里我们不需要判断 neighborCount === 0，
+                // 因为只有 0 才能进队列继续搜寻邻居（边界数字不扩散）
+                if (currentCell.neighborCount === 0) {
+                    for (let dir of dirs) {
+                        const nx = x + dir.x;
+                        const ny = y + dir.y;
+                        const key = `${nx},${ny}`;
+
+                        // 越界检查
+                        if (nx >= 0 && nx < CONFIG.gridW && ny >= 0 && ny < CONFIG.gridH) {
+                            if (!visited.has(key)) {
+                                const neighbor = gridData[ny][nx];
+
+                                // 关键：只要没揭开，就立即在逻辑上揭开
+                                if (!neighbor.isRevealed) {
+                                    // --- 状态锁定 ---
+                                    neighbor.isRevealed = true; // 锁死状态，防止再次点击
+                                    neighbor.isMarked = false;  // 逻辑上去除标记
+
+                                    visited.add(key);
+
+                                    // 只有 0 继续入队扩散，数字只揭开不扩散
+                                    if (neighbor.neighborCount === 0) {
+                                        queue.push({ x: nx, y: ny, dist: dist + 1 });
+                                    } else {
+                                        // 这是一个边界数字，记录动画，但不再入队
+                                        animationQueue.push({ cell: neighbor, dist: dist + 1 });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. === 阶段二：异步视觉动画 ===
+            // 此时所有相关格子的 isRevealed 已经是 true 了，玩家点不动了
+            // 我们只需要安安静静地把样式刷上去
+
+            if (animationQueue.length === 0) return;
+
+            // 先找到最大层级 (最远的那个格子离起点的距离)
+            let maxDist = 0;
+            animationQueue.forEach(item => { if (item.dist > maxDist) maxDist = item.dist; });
+
+            // === 核心修改：动态时间步长 ===
+            let stepDelay = 30;           // 默认的基础速度 (ms/步)
+            const maxTotalDuration = 500; // 最大总耗时限制 (ms)
+
+            // 计算：如果按默认速度跑完会超过 500ms
+            if (maxDist * stepDelay > maxTotalDuration) {
+                // 强制压缩：用总时间除以总步数
+                stepDelay = maxTotalDuration / maxDist;
+            }
+
+            for (let d = 1; d <= maxDist; d++) {
+                setTimeout(() => {
+                    if (isGameOver) return;
+
+                    animationQueue.forEach(item => {
+                        if (item.dist === d) {
+                            // 调用我们刚才写的纯视觉更新函数
+                            item.cell.updateVisuals();
+                        }
+                    });
+                }, d * stepDelay);
+            }
+
+            updateHUD();
         }
 
         function revealRayPath(startX, startY, dirX, dirY) {
@@ -1549,11 +1727,10 @@
             reveal() {
                 if (this.isRevealed) return;
 
-                this.isMarked = false;
-                this.element.classList.remove('marked');
-
                 this.isRevealed = true;
-                this.element.classList.add('revealed');
+                this.isMarked = false;
+
+                this.updateVisuals();
 
                 if (this.isMine) {
                     this.element.classList.add('mine');
@@ -1573,16 +1750,26 @@
                     container.classList.add('shake');
 
                 } else {
-                    this.element.textContent = this.neighborCount === 0 ? '' : this.neighborCount;
-                    this.element.dataset.num = this.neighborCount;
-
                     if (this.neighborCount === 0) {
-                        floodFill(this.x, this.y);
+                        animatedFloodFill(this.x, this.y);
                     } else {
                         spawnExplosion(this.x, this.y, 'rgba(0, 243, 255, 0.4)');
                     }
                 }
                 updateHUD();
+            }
+
+            updateVisuals() {
+                // 移除标记样式
+                this.element.classList.remove('marked');
+                // 添加揭示样式
+                this.element.classList.add('revealed');
+
+                if (!this.isMine) {
+                    // 显示数字
+                    this.element.textContent = this.neighborCount === 0 ? '' : this.neighborCount;
+                    this.element.dataset.num = this.neighborCount;
+                }
             }
         }
 
@@ -1680,7 +1867,7 @@
             gridEl.style.gridTemplateColumns = `repeat(${CONFIG.gridW}, ${size}px)`;
             gridEl.style.gridTemplateRows = `repeat(${CONFIG.gridH}, ${size}px)`;
 
-            const dpr = resizeCanvasToDisplaySize(rayCanvas, totalWidth, totalHeight);
+            const dpr = resizeCanvasToDisplaySize(rayCanvas, window.innerWidth, window.innerHeight);
 
             // 关键：把坐标系缩回“CSS 像素”，这样你后面用的 cellSize/像素计算都不用改
             rayCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1700,10 +1887,12 @@
             startRenderLoop();
         }
 
-        function generateMines(startX, startY) {
+        function generateMines(startX, startY, dirX, dirY) {
+            // 先确保起点是雷
             gridData[startY][startX].isMine = true;
             let placed = 1;
 
+            // 此时我们不干预分布，纯粹随机
             while (placed < totalMines) {
                 const rx = Math.floor(Math.random() * CONFIG.gridW);
                 const ry = Math.floor(Math.random() * CONFIG.gridH);
@@ -1714,6 +1903,52 @@
                 }
             }
 
+            // 收集该方向上距离 2 到 5 的合法格子
+            const candidates = [];
+            let hasMineInPath = false;
+
+            // 距离0是起点，距离1是九宫格边缘（会被直接炸开），
+            // 射线穿透4个未揭示格，所以覆盖的是距离 2, 3, 4, 5
+            for (let i = 2; i <= 5; i++) {
+                const tx = startX + (dirX * i);
+                const ty = startY + (dirY * i);
+
+                // 越界检查
+                if (tx >= 0 && tx < CONFIG.gridW && ty >= 0 && ty < CONFIG.gridH) {
+                    const cell = gridData[ty][tx];
+                    candidates.push(cell);
+                    if (cell.isMine) {
+                        hasMineInPath = true; // 运气不错，自然生成了
+                    }
+                }
+            }
+
+            if (!hasMineInPath && candidates.length > 0) {
+
+                // A. 从路径候选格中选一个幸运儿变成雷
+                const luckyCell = candidates[Math.floor(Math.random() * candidates.length)];
+                luckyCell.isMine = true;
+
+                // B. 为了保持总雷数不变，必须擦除掉地图上另一个现有的雷
+                //    这个雷不能是起点，也不能是我们刚才选中的幸运儿
+                let removed = false;
+                while (!removed) {
+                    const rx = Math.floor(Math.random() * CONFIG.gridW);
+                    const ry = Math.floor(Math.random() * CONFIG.gridH);
+                    const target = gridData[ry][rx];
+
+                    // 必须是雷，且不是起点，且不是刚才新设的那个位置
+                    if (target.isMine &&
+                        !(rx === startX && ry === startY) &&
+                        !(rx === luckyCell.x && ry === luckyCell.y)) {
+
+                        target.isMine = false; // 移除这颗雷
+                        removed = true;
+                    }
+                }
+            }
+
+            // 统一计算数字
             calculateNumbers();
         }
 
@@ -1737,34 +1972,71 @@
             }
         }
 
+        function calculateRayPath(startX, startY, dirX, dirY) {
+            let currentX = startX;
+            let currentY = startY;
+            let distance = 0;
+            let unrevealedHitCount = 0;
+            const path = []; // 存储路径上经过的格子
+
+            while (true) {
+                //以此前进一格
+                currentX += dirX;
+                currentY += dirY;
+                distance++;
+
+                // 1. 撞墙检测（屏幕边缘）
+                if (currentX < 0 || currentX >= CONFIG.gridW ||
+                    currentY < 0 || currentY >= CONFIG.gridH) {
+                    break;
+                }
+
+                const cell = gridData[currentY][currentX];
+                path.push(cell);
+
+                // 2. 穿透检测
+                // 如果格子未揭开（无论是雷还是安全），消耗一点穿透力
+                if (!cell.isRevealed) {
+                    unrevealedHitCount++;
+                }
+
+                // 3. 耗尽停止
+                // 如果已经穿透了指定数量的未揭开格子，就停止
+                if (unrevealedHitCount >= CONFIG.penetrationLimit) {
+                    break;
+                }
+            }
+
+            return { distance, path };
+        }
+
         function fireRay(startX, startY, dirX, dirY, delay = 0) {
             setTimeout(() => {
                 if (isGameOver) return;
 
+                // 1. 先计算路径（逻辑核心）
+                const { distance, path } = calculateRayPath(startX, startY, dirX, dirY);
+
                 playSound('ray');
-                spawnRay(startX, startY, dirX, dirY);
 
-                let hitMine = false;
+                // 2. 视觉生成：传入计算出的实际距离 (distance)
+                // 这样射线就能在墙边或者第4个格子处精准停下
+                spawnRay(startX, startY, dirX, dirY, distance);
 
-                for (let i = 1; i <= CONFIG.rayLength; i++) {
-                    const tx = startX + (dirX * i);
-                    const ty = startY + (dirY * i);
-
-                    if (tx < 0 || tx >= CONFIG.gridW || ty < 0 || ty >= CONFIG.gridH) break;
-
-                    const targetCell = gridData[ty][tx];
+                // 3. 游戏逻辑：遍历路径上的格子
+                for (const targetCell of path) {
 
                     if (targetCell.isMine) {
                         if (!targetCell.isRevealed) {
-                            targetCell.reveal();
-                            explodeNeighbors(tx, ty);
-                            fireRay(tx, ty, dirX, dirY, 120);
+                            targetCell.reveal(); // 揭示雷
+                            explodeNeighbors(targetCell.x, targetCell.y); // 炸开周围
+                            fireRay(targetCell.x, targetCell.y, dirX, dirY, 120);
 
                             comboCounter++;
                             const showCount = Math.min(comboCounter, 10);
 
                             if (showCount >= 2) {
-                                activeEffects.push(new FloatingText(tx, ty, showCount));
+                                activeEffects.push(new FloatingText(targetCell.x, targetCell.y, showCount));
                             }
 
                             hitMine = true;
@@ -1811,9 +2083,6 @@
             playSound('hover');
         }
 
-        /* ✅ 小改动：让 startTimer 支持“暂停后续计”
-           用 elapsedTime 回推 gameStartTime，开局 elapsedTime=0 也不影响
-        */
         function startTimer() {
             if (timerInterval) return;
 
@@ -1828,7 +2097,6 @@
             }, 1000);
         }
 
-        /* ✅ 绑定按钮事件（加在你现有按钮事件绑定附近） */
         document.getElementById('btn-tutorial').addEventListener('click', () => {
             openTutorial();
         });
@@ -1956,10 +2224,10 @@
             const cell = gridData[y][x];
             if (cell.isRevealed || cell.isMarked) return;
 
-            comboCounter = 0;
+            comboCounter = 1;
 
             if (isFirstMove) {
-                generateMines(x, y);
+                generateMines(x, y, dirX, dirY);
                 isFirstMove = false;
                 hudStatus.textContent = "链接建立";
                 startTimer();
@@ -2021,7 +2289,8 @@
                         { x: 0, y: 1 }, { x: -1, y: 1 }, { x: -1, y: 0 }, { x: -1, y: -1 }
                     ];
                     dirs.forEach(d => {
-                        spawnRay(cell.x, cell.y, d.x, d.y, true);
+                        const { distance, path } = calculateRayPath(cell.x, cell.y, d.x, d.y);
+                        spawnRay(cell.x, cell.y, d.x, d.y, distance, true);
                         revealRayPath(cell.x, cell.y, d.x, d.y);
                     });
 
@@ -2110,9 +2379,20 @@
         });
 
         document.getElementById('btn-start').addEventListener('click', () => {
-            CONFIG.gridW = parseInt(inpW.value);
-            CONFIG.gridH = parseInt(inpH.value);
-            CONFIG.density = parseInt(inpD.value) / 100;
+            // 获取当前滑块的值
+            const w = parseInt(inpW.value);
+            const h = parseInt(inpH.value);
+            const d = parseInt(inpD.value);
+
+            // 1. 更新全局配置
+            CONFIG.gridW = w;
+            CONFIG.gridH = h;
+            CONFIG.density = d / 100;
+
+            // 2. 步到 URL ===
+            updateURLSettings(w, h, d);
+
+            // 3. 开始游戏
             menuOverlay.classList.add('hidden');
             initGame();
         });
@@ -2124,6 +2404,7 @@
 
         document.getElementById('btn-menu').addEventListener('click', () => {
             document.getElementById('game-over-overlay').classList.add('hidden');
+            clearURLSettings();
             menuOverlay.classList.remove('hidden');
         });
 
@@ -2134,23 +2415,28 @@
 
         // === 修改后的菜单按钮逻辑 ===
         document.getElementById('btn-ingame-menu').addEventListener('click', () => {
-            // 1. 立即结束游戏状态，防止后续点击
+            // 1. 立即停止计时器 (核心修复：防止背景时间继续走)
+            stopTimer();
+
+            // 2. 标记游戏结束，阻断后续交互
             isGameOver = true;
 
-            // 2. 如果正在进行连锁爆炸动画，立即清除定时器，防止后台卡顿或声音继续播放
+            // 3. 清理所有可能的失败动画/延时
             if (window.failIntervals) {
                 window.failIntervals.forEach(id => clearTimeout(id));
                 window.failIntervals = [];
             }
             if (window.failTimeout) clearTimeout(window.failTimeout);
-
             if (window.gameResultTimeout) clearTimeout(window.gameResultTimeout);
 
-            // 3. 更新 HUD 状态
-            hudStatus.textContent = "已中断";
+            // 4. 更新 HUD 状态
+            hudStatus.textContent = "已挂起";
             hudStatus.style.color = "#888";
+            
+            clearURLSettings();
 
-            // 4. 显示菜单
+            // 5. 确保结算弹窗关闭，并显示主菜单
+            document.getElementById('game-over-overlay').classList.add('hidden');
             menuOverlay.classList.remove('hidden');
         });
 
@@ -2170,6 +2456,73 @@
 
         setupInput();
 
+        function loadSettingsFromURL() {
+            const params = new URLSearchParams(window.location.search);
+
+            // 检查参数是否存在：只有当宽、高、密度三个参数都有时，才视为有效配置
+            const hasParams = params.has('w') && params.has('h') && params.has('d');
+
+            // 辅助验证函数
+            const getSafeVal = (key, min, max, defaultVal) => {
+                if (!params.has(key)) return defaultVal;
+                const val = parseInt(params.get(key));
+                if (isNaN(val)) return defaultVal;
+                return Math.max(min, Math.min(max, val));
+            };
+
+            // 读取并更新滑块 (即使参数不全，能读多少读多少)
+            const w = getSafeVal('w', 8, 32, 10);
+            const h = getSafeVal('h', 8, 32, 15);
+            const d = getSafeVal('d', 25, 75, 30);
+
+            inpW.value = w;
+            inpH.value = h;
+            inpD.value = d;
+
+            document.getElementById('val-w').textContent = w;
+            document.getElementById('val-h').textContent = h;
+            document.getElementById('val-d').textContent = d + '%';
+
+            // 无论是否自动开始，都先把 CONFIG 更新好
+            CONFIG.gridW = w;
+            CONFIG.gridH = h;
+            CONFIG.density = d / 100;
+
+            if (hasParams) {
+                updateURLSettings(w, h, d);
+            }
+
+            return hasParams; // 返回是否检测到完整参数
+        }
+
+        // === 新增：将当前设置写入 URL (不刷新页面) ===
+        function updateURLSettings(w, h, d) {
+            const url = new URL(window.location);
+            url.searchParams.set('w', w);
+            url.searchParams.set('h', h);
+            url.searchParams.set('d', d);
+
+            // 使用 replaceState 更新 URL 但不增加浏览器历史记录堆栈（避免按返回键回不去）
+            window.history.replaceState({}, '', url);
+        }
+
+        function clearURLSettings() {
+            // 获取当前路径（不含查询参数）
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({}, '', cleanUrl);
+        }
+
+        // 1. 读取设置，并获取是否应该自动开始
+        const shouldAutoStart = loadSettingsFromURL();
+
+        if (shouldAutoStart) {
+            // 2. 如果是带参数的链接：隐藏菜单，直接开始
+            menuOverlay.classList.add('hidden');
+            initGame();
+        } else {
+            // 3. 如果是普通访问：显示菜单（这一步其实默认HTML里就是不带hidden的，写在这里是为了逻辑清晰）
+            menuOverlay.classList.remove('hidden');
+        }
     </script>
 </body>
 
