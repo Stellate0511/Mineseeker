@@ -1660,6 +1660,14 @@
 
             if (animationQueue.length === 0) return;
 
+            if (isGameOver) {
+                animationQueue.forEach(item => {
+                    item.cell.updateVisuals();
+                });
+                // 失败时不需要播放扩散音效，也不需要更新HUD（反正都要输了）
+                return;
+            }
+
             // 先找到最大层级 (最远的那个格子离起点的距离)
             let maxDist = 0;
             animationQueue.forEach(item => { if (item.dist > maxDist) maxDist = item.dist; });
@@ -2432,7 +2440,7 @@
             // 4. 更新 HUD 状态
             hudStatus.textContent = "已挂起";
             hudStatus.style.color = "#888";
-            
+
             clearURLSettings();
 
             // 5. 确保结算弹窗关闭，并显示主菜单
