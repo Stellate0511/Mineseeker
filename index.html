@@ -193,7 +193,10 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: margin 0.3s;
+
+            transform-origin: 0 0;
+            transition: margin 0.3s, transform 180ms ease;
+            will-change: transform;
             /* 这里的 position: relative 不再限制 canvas，因为 canvas 已经是 fixed 了 */
         }
 
@@ -475,8 +478,8 @@
             pointer-events: none;
             text-shadow: 0 0 3px black;
             z-index: 20;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0));
-            padding-bottom: 0;
+            background: none;
+            padding: 0;
         }
 
         #menu-overlay,
@@ -1431,7 +1434,7 @@
 
         <canvas id="ray-canvas"></canvas>
 
-        <div id="guide-text">点击标记安全区<br>从格子拖动（八方向）引爆隐藏地雷</div>
+        <div id="guide-text">点击标记安全区<br>从格子拖动（八方向）引爆隐藏地雷<br>鼠标滚轮/双指轻触缩放作战区</div>
     </div>
 
     <div id="menu-overlay">
@@ -1750,9 +1753,12 @@
                 this.t += dt / this.duration;
                 if (this.t > 1) this.t = 1;
 
+                const s = window.__gridRenderScale || 1;
+                const inv = 1 / s;
+
                 // 位移（像素/秒）
-                this.x += this.vx * dt * 60;
-                this.y += this.vy * dt * 60;
+                this.x += this.vx * dt * 60 * inv;
+                this.y += this.vy * dt * 60 * inv;
 
                 // 重力（像素/秒²）
                 this.vy += this.gravity * dt * 60;
@@ -1791,7 +1797,17 @@
                 if (this.additive) ctx.globalCompositeOperation = 'lighter';
                 ctx.globalAlpha = this.life;
 
-                ctx.translate(this.x + this.jx, this.y + this.jy);
+                const s = window.__gridRenderScale || 1;
+                const inv = 1 / s;
+
+                ctx.translate(this.x, this.y);
+
+                // 先把全局网格缩放抵消掉（只影响大小，不影响落点）
+                ctx.scale(inv, inv);
+
+                // 抖动也放到“反缩放后”的坐标系里，避免缩放后抖动过大
+                ctx.translate(this.jx, this.jy);
+
                 ctx.rotate(this.rot);
                 ctx.scale(scale, scale);
 
@@ -1978,11 +1994,18 @@
                 rayCtx.setTransform(1, 0, 0, 1, 0, 0); // 重置矩阵以确保清空全屏
                 rayCtx.clearRect(0, 0, rayCanvas.width, rayCanvas.height);
 
-                // 3. 设置绘制矩阵：
-                // 缩放 (dpr) + 平移 (rect.left, rect.top)
-                // 还要加上 padding (4px) 的偏移，因为 grid-wrapper 有 padding
-                // 如果你的 rect 是取自 #grid 元素本身，就不需要加 padding，直接用 rect.left
-                rayCtx.setTransform(dpr, 0, 0, dpr, rect.left * dpr, rect.top * dpr);
+                // gridEl 当前屏幕宽度 / 理论未缩放宽度 = 当前 scale
+                const logicalW = CONFIG.gridW * CONFIG.cellSize;
+                const logicalH = CONFIG.gridH * CONFIG.cellSize;
+
+                const scaleX = rect.width / logicalW;
+                const scaleY = rect.height / logicalH;
+                // 通常 scaleX≈scaleY；取一个更稳的
+                const s = Math.min(scaleX, scaleY) || 1;
+
+                window.__gridRenderScale = s;
+
+                rayCtx.setTransform(dpr * s, 0, 0, dpr * s, rect.left * dpr, rect.top * dpr);
 
                 // --- 下面的绘制逻辑完全不用动 ---
                 for (let i = activeEffects.length - 1; i >= 0; i--) {
@@ -2298,6 +2321,8 @@
             window.failIntervals.forEach(id => clearTimeout(id));
             window.failIntervals = [];
 
+            resetZoom();
+
             stopTimer();
             elapsedTime = 0;
             document.getElementById('timer-display').textContent = "00:00";
@@ -2600,6 +2625,13 @@
             if (e.target.id === 'tutorial-overlay') closeTutorial();
         });
 
+        let isZoomed = false;
+        function resetZoom() {
+            const wrapper = document.getElementById('grid-wrapper');
+            wrapper.style.transform = '';
+            isZoomed = false;
+        }
+
         function setupInput() {
             // 禁止网格区域默认右键菜单
             gridEl.addEventListener('contextmenu', (e) => {
@@ -2611,8 +2643,9 @@
                 const rect = gridEl.getBoundingClientRect();
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                const x = Math.floor((clientX - rect.left) / CONFIG.cellSize);
-                const y = Math.floor((clientY - rect.top) / CONFIG.cellSize);
+                const cs = rect.width / CONFIG.gridW;
+                const x = Math.floor((clientX - rect.left) / cs);
+                const y = Math.floor((clientY - rect.top) / cs);
                 return { x, y, clientX, clientY };
             };
 
@@ -2708,9 +2741,276 @@
             window.addEventListener('mousemove', moveDrag);
             window.addEventListener('mouseup', endDrag);
 
-            gridEl.addEventListener('touchstart', startDrag, { passive: false });
-            window.addEventListener('touchmove', moveDrag, { passive: false });
-            window.addEventListener('touchend', endDrag);
+            // ===== 双指轻点缩放（与单指拖动/点按合并）=====
+            let gridTouchSession = false;
+            let currentZoomScale = 1;
+
+            let pinchTap = null;          // 双指轻点候选
+            let singleStartTimer = null;  // “等第二指”的延迟计时器
+            let pendingSingleEvent = null;
+
+            function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+            function getDynamicZoomScale() {
+                const wrapper = document.getElementById('grid-wrapper');
+                const rect = wrapper.getBoundingClientRect();
+
+                const vw = window.innerWidth;
+                const vh = window.innerHeight;
+
+                // 网格完全塞进屏幕所需的最大倍数（通常≈1）
+                const fitScale = Math.min(vw / rect.width, vh / rect.height) * 0.98;
+
+                // 目标：放大后格子接近一个好点按的像素大小
+                const targetCellPx = 48; // 你可以调：44~56
+                const cellBasedScale = targetCellPx / CONFIG.cellSize;
+
+                // ✅ 关键：允许“超出屏幕”的程度（密网格给更大溢出空间）
+                // cellBasedScale 越大（说明格子越小越密），允许的溢出越多
+                const overflowFactor = clamp(1.3 + (cellBasedScale - 1) * 0.55, 1.3, 2.6);
+
+                // 不再用 fitScale 硬卡死，而是允许 fitScale * overflowFactor
+                const maxAllowed = fitScale * overflowFactor;
+
+                const desired = Math.min(cellBasedScale, maxAllowed);
+
+                // 最终兜底
+                return clamp(desired, 1.5, 4);
+            }
+
+            function cancelSingleStart() {
+                if (singleStartTimer) {
+                    clearTimeout(singleStartTimer);
+                    singleStartTimer = null;
+                }
+                pendingSingleEvent = null;
+            }
+
+            // 如果单指拖动已经开始，但第二指落下：取消拖动视觉&状态
+            function cancelDraggingNow() {
+                if (isDragging && startCell) {
+                    const c = gridData[startCell.y]?.[startCell.x];
+                    if (c) c.element.classList.remove('active');
+                }
+                isDragging = false;
+                startCell = null;
+            }
+
+            function applyZoomAt(clientX, clientY, scale) {
+                const wrapper = document.getElementById('grid-wrapper');
+                const rect = wrapper.getBoundingClientRect();
+
+                const px = clientX - rect.left;
+                const py = clientY - rect.top;
+
+                const tx = clientX - rect.left - px * scale;
+                const ty = clientY - rect.top - py * scale;
+
+                wrapper.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+            }
+
+            // ===== 鼠标滚轮：按鼠标所在位置缩放网格（最小改动）=====
+            function getWrapperMatrix(wrapper) {
+                const t = getComputedStyle(wrapper).transform;
+                if (!t || t === 'none') return { s: 1, tx: 0, ty: 0 };
+
+                // DOMMatrix 大部分现代浏览器支持；Safari 也OK（旧版可用 WebKitCSSMatrix）
+                const M = (window.DOMMatrix || window.WebKitCSSMatrix) ? new (window.DOMMatrix || window.WebKitCSSMatrix)(t) : null;
+                if (!M) return { s: 1, tx: 0, ty: 0 };
+
+                // 你的 transform 是 `translate(...) scale(...)`（CSS 从右到左应用 => 先 scale 后 translate）
+                // 所以矩阵里 a=d=scale, e/f=translate
+                return { s: M.a || 1, tx: M.e || 0, ty: M.f || 0 };
+            }
+
+            // 在“当前 transform 基础上”，以 clientX/Y 为锚点缩放到 newScale
+            function applyZoomAtKeepingPoint(clientX, clientY, newScale) {
+                const wrapper = document.getElementById('grid-wrapper');
+
+                const rect = wrapper.getBoundingClientRect();
+                const { s: curS, tx: curTx, ty: curTy } = getWrapperMatrix(wrapper);
+
+                // base = 未 transform 时 wrapper 的布局位置（视口坐标）
+                const baseLeft = rect.left - curTx;
+                const baseTop = rect.top - curTy;
+
+                // 鼠标点在“内容坐标系(未缩放)”下的位置
+                const localX = (clientX - rect.left) / curS;
+                const localY = (clientY - rect.top) / curS;
+
+                // 求新的 translate，让该 local 点在 newScale 下仍对齐到 clientX/Y
+                const newLeft = clientX - localX * newScale;
+                const newTop = clientY - localY * newScale;
+
+                const newTx = newLeft - baseLeft;
+                const newTy = newTop - baseTop;
+
+                wrapper.style.transform = `translate(${newTx}px, ${newTy}px) scale(${newScale})`;
+            }
+
+            // 监听滚轮
+            gridEl.addEventListener('wheel', (e) => {
+                if (isGameOver || isPaused) return;
+
+                e.preventDefault();
+
+                const wrapper = document.getElementById('grid-wrapper');
+                const { s: curS } = getWrapperMatrix(wrapper);
+
+                const factor = Math.exp(-e.deltaY * 0.003);
+
+                const maxS = getDynamicZoomScale() * 2;
+                let nextS = curS * factor;
+
+                nextS = clamp(nextS, 0.5, maxS);
+
+                // scale 回到 1 就直接 reset（避免残留 translate 导致轻微偏移）
+                if (0.9 <= nextS && nextS <= 1.1) {
+                    resetZoom();
+                    currentZoomScale = 1;
+                    return;
+                }
+
+                isZoomed = true;
+                currentZoomScale = nextS;
+
+                applyZoomAtKeepingPoint(e.clientX, e.clientY, nextS);
+            }, { passive: false });
+
+
+            // touchstart：根据 touches 数量决定走哪条路
+            gridEl.addEventListener('touchstart', (e) => {
+                if (isGameOver || isPaused) return;
+
+                // 必须阻止默认，否则会触发页面滚动/双指缩放等
+                e.preventDefault();
+                gridTouchSession = true;
+
+                // 1) 双指出现：进入“双指轻点候选”，并取消任何单指逻辑
+                if (e.touches.length === 2) {
+                    cancelSingleStart();
+                    cancelDraggingNow();
+
+                    const t0 = e.touches[0], t1 = e.touches[1];
+                    pinchTap = {
+                        time: performance.now(),
+                        x0: t0.clientX, y0: t0.clientY,
+                        x1: t1.clientX, y1: t1.clientY
+                    };
+                    return;
+                }
+
+                // 2) 单指：不要立刻 startDrag —— 给一个很短窗口等第二指
+                //    这样避免“双指不同时落下”导致误触发单指点/拖
+                if (e.touches.length === 1) {
+                    pinchTap = null; // 清掉任何旧状态
+                    cancelSingleStart();
+
+                    pendingSingleEvent = e;
+
+                    singleStartTimer = setTimeout(() => {
+                        // 超时仍然是单指：按原逻辑开始
+                        if (!pendingSingleEvent) return;
+                        startDrag(pendingSingleEvent);
+                        pendingSingleEvent = null;
+                        singleStartTimer = null;
+                    }, 90); // 80~120ms 都行：越小越灵敏，越大越不易误判
+                }
+            }, { passive: false });
+
+            window.addEventListener('touchmove', (e) => {
+                if (!gridTouchSession) return;
+                if (isGameOver || isPaused) return;
+                e.preventDefault();
+
+                // 如果第二指在“等待窗口”内出现了，touchmove 也应阻止单指逻辑
+                if (e.touches.length === 2) {
+                    // 只要双指移动，就不是“轻点”了
+                    if (pinchTap) {
+                        const t0 = e.touches[0], t1 = e.touches[1];
+                        const move =
+                            Math.hypot(t0.clientX - pinchTap.x0, t0.clientY - pinchTap.y0) +
+                            Math.hypot(t1.clientX - pinchTap.x1, t1.clientY - pinchTap.y1);
+                        if (move > 18) {
+                            pinchTap = null;
+                        }
+                    }
+                    return;
+                }
+
+                // 单指 move：如果还在等第二指，不做任何事（避免误触拖动）
+                if (singleStartTimer) return;
+
+                // 正常单指拖动
+                moveDrag(e);
+            }, { passive: false });
+
+            window.addEventListener('touchend', (e) => {
+                if (!gridTouchSession) return;
+                const shouldEndSession = (e.touches.length === 0);
+
+                if (isGameOver || isPaused) {
+                    if (shouldEndSession) {
+                        gridTouchSession = false;
+                        pinchTap = null;
+                        cancelSingleStart();
+                        cancelDraggingNow();
+                    }
+                    return;
+                }
+                e.preventDefault();
+
+                // 双指轻点判定：两指都抬起（最终 touches=0）才触发一次
+                if (pinchTap && e.touches.length === 0) {
+                    const dt = performance.now() - pinchTap.time;
+                    if (dt <= 260) {
+                        const cx = (pinchTap.x0 + pinchTap.x1) / 2;
+                        const cy = (pinchTap.y0 + pinchTap.y1) / 2;
+
+                        if (!isZoomed) {
+                            isZoomed = true;
+                            currentZoomScale = getDynamicZoomScale();
+                            applyZoomAt(cx, cy, currentZoomScale);
+                        } else {
+                            resetZoom();
+                        }
+                    }
+                    pinchTap = null;
+                    cancelSingleStart();
+                    gridTouchSession = false;
+                    return;
+                }
+
+                // 触发单指 end：如果还没到 startDrag 的延迟时间，说明是单击/短按
+                // 这里直接“立刻执行一次 startDrag + endDrag”会很危险（会触发你的拖判定阈值）
+                // 最小做法：如果延迟未触发，直接取消计时器并按“点击”走 endDrag 的现有逻辑是不成立的
+                // 所以：让原来 endDrag 处理即可，但要确保 startDrag 真正发生过才调用
+                if (singleStartTimer) {
+                    // 这是“快速点一下”但在90ms内结束：
+                    // 直接把 pendingSingleEvent 立刻 startDrag 再 endDrag，保证你现有“点/拖判定”不改
+                    clearTimeout(singleStartTimer);
+                    singleStartTimer = null;
+
+                    if (pendingSingleEvent) {
+                        startDrag(pendingSingleEvent);
+                        pendingSingleEvent = null;
+                        endDrag(e);
+                    }
+                    return;
+                }
+
+                // 正常：单指拖动结束
+                endDrag(e);
+
+                if (shouldEndSession) gridTouchSession = false;
+            }, { passive: false });
+
+            window.addEventListener('touchcancel', (e) => {
+                gridTouchSession = false;
+                pinchTap = null;
+                cancelSingleStart();
+                cancelDraggingNow();
+            }, { passive: false });
         }
 
         function handleAction(x, y, dirX, dirY) {
@@ -2818,6 +3118,7 @@
             if (isGameOver) return;
 
             stopTimer();
+            resetZoom();
 
             isGameOver = true;
             if (!win) {
