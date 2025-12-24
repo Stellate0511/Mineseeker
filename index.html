@@ -2309,6 +2309,23 @@
                 }, index * interval);
                 window.failIntervals.push(id);
             });
+
+            const finalRevealId = setTimeout(() => {
+                for (let y = 0; y < CONFIG.gridH; y++) {
+                    for (let x = 0; x < CONFIG.gridW; x++) {
+                        const cell = gridData[y][x];
+                        // 只要还没被揭开（说明既不是雷，也没被刚才的射线扫到）
+                        if (!cell.isRevealed) {
+                            cell.isRevealed = true;
+                            cell.isMarked = false;
+                            // 静默更新视觉，不播放声音，不带动画，仿佛系统彻底死机显示数据
+                            cell.updateVisuals();
+                        }
+                    }
+                }
+            }, endDuration);
+            
+            window.failIntervals.push(finalRevealId);
         }
 
         function checkWinCondition() {
