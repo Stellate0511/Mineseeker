@@ -499,6 +499,7 @@
         }
 
         #menu-overlay {
+            overflow-x: hidden;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             touch-action: pan-y;
@@ -1292,7 +1293,8 @@
                 padding: 12px 10px;
             }
 
-            .primary-btn {
+            .primary-btn,
+            .secondary-btn {
                 font-size: 1.05rem;
             }
         }
@@ -3267,21 +3269,9 @@
         }
 
         document.getElementById('btn-start').addEventListener('click', () => {
-            applyMode(diffSelect.value);
+            const mode = syncConfigFromUI();
 
-            // 获取当前滑块的值
-            const w = parseInt(inpW.value);
-            const h = parseInt(inpH.value);
-            const d = parseInt(inpD.value);
-            const mode = diffSelect.value;
-
-            // 1. 更新全局配置
-            CONFIG.gridW = w;
-            CONFIG.gridH = h;
-            CONFIG.density = d / 100;
-
-            // 2. 步到 URL ===
-            updateURLSettings(mode, w, h, d);
+            updateURLSettings(mode, CONFIG.gridW, CONFIG.gridH, Math.round(CONFIG.density * 100));
 
             // 3. 开始游戏
             menuOverlay.classList.add('hidden');
@@ -3290,6 +3280,7 @@
 
         document.getElementById('btn-restart').addEventListener('click', () => {
             document.getElementById('game-over-overlay').classList.add('hidden');
+            syncConfigFromUI();
             initGame();
         });
 
@@ -3301,6 +3292,7 @@
 
         // 游戏内菜单按钮事件
         document.getElementById('btn-ingame-restart').addEventListener('click', () => {
+            syncConfigFromUI();
             initGame();
         });
 
@@ -3349,6 +3341,20 @@
 
         setupInput();
 
+        function syncConfigFromUI() {
+            const mode = diffSelect.value;
+
+            // 关键：让 enhanced 在“此刻的横竖屏”下重新计算 inpW/inpH
+            applyMode(mode);
+
+            // 再把 UI 的最终值写回 CONFIG
+            CONFIG.gridW = parseInt(inpW.value, 10);
+            CONFIG.gridH = parseInt(inpH.value, 10);
+            CONFIG.density = parseInt(inpD.value, 10) / 100;
+
+            return mode;
+        }
+
         function loadSettingsFromURL() {
             const params = new URLSearchParams(window.location.search);
 
@@ -3361,9 +3367,9 @@
                     diffSelect.value = mode;
                     applyMode(mode);
                     // 这里我们需要手动更新 CONFIG，因为 applyMode 只更新了 DOM
-                    CONFIG.gridW = PRESETS[mode].w;
-                    CONFIG.gridH = PRESETS[mode].h;
-                    CONFIG.density = PRESETS[mode].d / 100;
+                    CONFIG.gridW = parseInt(inpW.value, 10);
+                    CONFIG.gridH = parseInt(inpH.value, 10);
+                    CONFIG.density = parseInt(inpD.value, 10) / 100;
                     return true; // 自动开始
                 }
 
