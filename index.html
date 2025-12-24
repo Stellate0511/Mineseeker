@@ -1394,6 +1394,7 @@
             </div>
             <div class="top-controls">
                 <div class="icon-btn" id="btn-ingame-tutorial" title="教程">?</div>
+                <div class="icon-btn" id="btn-ingame-mute" title="静音/取消静音">🔊</div>
                 <div class="icon-btn" id="btn-ingame-restart" title="重开">↻</div>
                 <div class="icon-btn" id="btn-ingame-menu" title="菜单">☰</div>
             </div>
@@ -1610,7 +1611,10 @@
         let isDragging = false;
         let dragLine = { x: 0, y: 0 };
 
+        let isMuted = localStorage.getItem('mineseeker_mute') === 'true';
+
         function playSound(type) {
+            if (isMuted) return;
             if (AUDIO_CTX.state === 'suspended') AUDIO_CTX.resume();
             const osc = AUDIO_CTX.createOscillator();
             const gainNode = AUDIO_CTX.createGain();
@@ -1656,6 +1660,53 @@
                 gainNode.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
                 osc.start(t);
                 osc.stop(t + 0.5);
+            } else if (type === 'ui-click') {
+                const dur = 0.02; // 20ms
+                const sampleRate = AUDIO_CTX.sampleRate;
+                const frameCount = Math.floor(sampleRate * dur);
+                const buffer = AUDIO_CTX.createBuffer(1, frameCount, sampleRate);
+                const data = buffer.getChannelData(0);
+
+                // 生成短噪声 + 快速衰减（前面更强，后面快速收）
+                for (let i = 0; i < frameCount; i++) {
+                    const x = i / frameCount;
+                    const env = Math.pow(1 - x, 6); // 衰减曲线，指数越大越“咔”
+                    data[i] = (Math.random() * 2 - 1) * env;
+                }
+
+                const src = AUDIO_CTX.createBufferSource();
+                src.buffer = buffer;
+
+                const hp = AUDIO_CTX.createBiquadFilter();
+                hp.type = 'highpass';
+                hp.frequency.setValueAtTime(800, t); // 去掉低频嗡嗡
+
+                const bp = AUDIO_CTX.createBiquadFilter();
+                bp.type = 'bandpass';
+                bp.frequency.setValueAtTime(2500, t); // 点击的“塑料感”
+                bp.Q.setValueAtTime(0.9, t);
+
+                const gain = AUDIO_CTX.createGain();
+                gain.gain.setValueAtTime(0.0, t);
+                gain.gain.linearRampToValueAtTime(0.18, t + 0.001); // 1ms attack
+                gain.gain.exponentialRampToValueAtTime(0.001, t + dur); // 快速收尾
+
+                src.connect(hp);
+                hp.connect(bp);
+                bp.connect(gain);
+                gain.connect(AUDIO_CTX.destination);
+
+                src.start(t);
+                src.stop(t + dur);
+            }
+            else if (type === 'ui-tick') {
+                // 新增：滑块拖动时的短促音
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(800, t);
+                gainNode.gain.setValueAtTime(0.05, t);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+                osc.start(t);
+                osc.stop(t + 0.03);
             }
         }
 
@@ -3429,8 +3480,82 @@
             window.history.replaceState({}, '', cleanUrl);
         }
 
+        function setupUISounds() {
+            // 1. 按钮、下拉框、头像链接
+            // 包含: .menu-btn(主菜单按钮), .icon-btn(顶部图标), select(下拉框), #profile-link(头像)
+            const interactiveElements = document.querySelectorAll('.menu-btn, .icon-btn, select, #profile-link');
+
+            interactiveElements.forEach(el => {
+                // 鼠标移入音效 (原有的 hover 音效)
+                el.addEventListener('mouseenter', () => {
+                    // 只有未被禁用的元素才发声
+                    if (!el.disabled) playSound('hover');
+                });
+
+                // 鼠标点击音效 (新的 ui-click)
+                el.addEventListener('click', () => {
+                    if (!el.disabled) playSound('ui-click');
+                });
+
+                // 特殊：下拉框改变选项时也播放点击音
+                if (el.tagName === 'SELECT') {
+                    el.addEventListener('change', () => playSound('ui-click'));
+                }
+            });
+
+            // 2. 滑块 (Range Inputs)
+            const rangeInputs = document.querySelectorAll('input[type="range"]');
+            rangeInputs.forEach(el => {
+                // 移入滑块
+                el.addEventListener('mouseenter', () => playSound('hover'));
+
+                // 拖动滑块时播放连续的 tick 音效
+                el.addEventListener('input', () => playSound('ui-tick'));
+            });
+        }
+
+        document.getElementById('btn-ingame-mute').addEventListener('click', function (e) {
+            isMuted = !isMuted;
+
+            // 【关键】保存状态到本地存储
+            localStorage.setItem('mineseeker_mute', isMuted);
+
+            // 更新界面
+            updateMuteButtonUI();
+
+            // 如果是取消静音，播放一声反馈
+            if (!isMuted) {
+                playSound('ui-click');
+            }
+
+            e.stopPropagation();
+        });
+
+        function updateMuteButtonUI() {
+            const btn = document.getElementById('btn-ingame-mute');
+            if (!btn) return;
+
+            if (isMuted) {
+                btn.textContent = '🔇';
+                // 静音状态样式
+                btn.style.borderColor = 'var(--neon-red)';
+                btn.style.color = 'var(--neon-red)';
+                btn.style.boxShadow = '0 0 10px var(--neon-red)';
+                btn.style.background = 'rgba(255, 0, 60, 0.1)';
+            } else {
+                btn.textContent = '🔊';
+                // 恢复正常样式
+                btn.style.borderColor = '';
+                btn.style.color = '';
+                btn.style.boxShadow = '';
+                btn.style.background = '';
+            }
+        }
+        updateMuteButtonUI();
+
         // 启动入口
         const shouldAutoStart = loadSettingsFromURL();
+        setupUISounds();
         if (shouldAutoStart) {
             menuOverlay.classList.add('hidden');
             initGame();
