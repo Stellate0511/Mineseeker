@@ -936,6 +936,9 @@
             cursor: pointer;
             text-transform: uppercase;
             box-shadow: 0 0 10px rgba(0, 243, 255, 0.1);
+
+            border-radius: 0;
+            background-clip: padding-box;
         }
 
         select:hover {
@@ -1225,7 +1228,7 @@
         /* 主要按钮 (启动) - 更大更亮 */
         .primary-btn {
             background: rgba(0, 243, 255, 0.15);
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             padding: 15px 30px;
             border-width: 2px;
             font-weight: bold;
@@ -1238,7 +1241,7 @@
 
         /* 次要按钮 (教程) */
         .secondary-btn {
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             opacity: 0.8;
         }
 
@@ -2792,8 +2795,7 @@
                 for (let y = 0; y < CONFIG.gridH; y++) {
                     for (let x = 0; x < CONFIG.gridW; x++) {
                         const cell = gridData[y][x];
-                        // 只要还没被揭开（说明既不是雷，也没被刚才的射线扫到）
-                        if (!cell.isRevealed) {
+                        if (!cell.isRevealed && !cell.isMine) {
                             cell.isRevealed = true;
                             cell.isMarked = false;
                             // 静默更新视觉，不播放声音，不带动画，仿佛系统彻底死机显示数据
