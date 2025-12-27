@@ -9,7 +9,7 @@
         :root {
             --bg-color: #050505;
             --grid-bg: #000000;
-            --cell-unrevealed: #1a1a1a;
+            --cell-unrevealed: #2a2a2a;
             --cell-revealed: #050505;
             --cell-border-light: #333;
             --cell-border-dark: #111;
@@ -53,6 +53,13 @@
             background-size: 100% 4px;
             pointer-events: none;
             z-index: 10;
+        }
+
+        /* =========================
+            FAILURE DANGER MODE
+        ========================= */
+        body.failure-mode {
+            background-color: #250000;
         }
 
         #game-container {
@@ -323,14 +330,17 @@
 
         .cell[data-num="6"] {
             color: cyan;
+            text-shadow: 0 0 8px cyan;
         }
 
         .cell[data-num="7"] {
             color: white;
+            text-shadow: 0 0 8px white;
         }
 
         .cell[data-num="8"] {
             color: grey;
+            text-shadow: 0 0 8px grey;
         }
 
         .cell.mine-flash {
@@ -344,22 +354,46 @@
             background-color: rgba(255, 0, 60, 0.2);
             border: 1px solid var(--neon-red);
             box-shadow: inset 0 0 10px rgba(255, 0, 60, 0.3);
-            animation: pulse-border 1.5s infinite;
             color: var(--neon-red) !important;
             text-shadow: 0 0 8px var(--neon-red);
         }
 
-        @keyframes pulse-border {
-            0% {
-                box-shadow: inset 0 0 5px rgba(255, 0, 60, 0.3);
+        .cell.mine::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+
+            /* 一次性画好“最强”的内发光 */
+            box-shadow: inset 0 0 15px rgba(255, 0, 60, 0.6);
+
+            /* 只动画合成属性 */
+            opacity: 0.35;
+            animation: pulse-glow 1.5s ease-in-out infinite;
+
+            animation-delay: 0.2s;
+            /* 150ms闪光之后再开始呼吸 */
+            animation-fill-mode: both;
+            /* delay期间保持起始帧状态，避免突然跳一下 */
+
+            /* 提升合成层（避免回退到 repaint） */
+            will-change: opacity;
+        }
+
+        .cell.mine.no-pulse::before {
+            animation: none !important;
+            opacity: 0.35;
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                opacity: 0.25;
             }
 
             50% {
-                box-shadow: inset 0 0 15px rgba(255, 0, 60, 0.6);
-            }
-
-            100% {
-                box-shadow: inset 0 0 5px rgba(255, 0, 60, 0.3);
+                opacity: 1;
             }
         }
 
@@ -616,6 +650,31 @@
             border-bottom: 1px solid #333;
             position: relative;
             overflow: hidden;
+            padding-right: 40px;
+        }
+
+        /* === 【新增】结算卡片关闭按钮样式 === */
+        #btn-close-result {
+            position: absolute;
+            top: 5px;
+            right: 15px;
+            font-size: 2rem;
+            line-height: 1;
+            color: #444;
+            /* 默认暗色，不抢视觉重心 */
+            cursor: pointer;
+            z-index: 10;
+            font-family: Arial, sans-serif;
+            /* 用简单字体显示 × */
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        #btn-close-result:hover {
+            color: var(--neon-red);
+            /* 悬停变红 */
+            text-shadow: 0 0 10px var(--neon-red);
+            transform: scale(1.1);
         }
 
         .card-header h2 {
@@ -962,6 +1021,29 @@
             align-items: center;
         }
 
+        .input-param-btn {
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            font-family: inherit;
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 243, 255, 0.2);
+            white-space: nowrap;
+            transform: translateY(-2px);
+            /* 保持之前的视觉对齐微调 */
+            transition: all 0.2s;
+            /* 添加平滑过渡 */
+        }
+
+        /* 悬停高亮效果 */
+        .input-param-btn:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 15px var(--neon-blue);
+        }
+
         /* 调整头像位置，避免被终端挡住 */
         #profile-link {
             top: 15px;
@@ -1128,6 +1210,11 @@
             text-shadow: 0 0 5px var(--neon-blue);
         }
 
+        .val-highlight[data-oob="1"] {
+            color: var(--neon-yellow);
+            text-shadow: 0 0 8px var(--neon-yellow);
+        }
+
         /* 参数锁定时的占位动画 */
         #parameter-locked {
             flex-grow: 1;
@@ -1187,6 +1274,92 @@
             }
         }
 
+        /* === 新增：参数输入弹窗样式 === */
+        #param-input-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .param-modal {
+            background: rgba(5, 5, 10, 0.95);
+            border: 2px solid var(--neon-blue);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+            padding: 25px;
+            width: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .param-modal h3 {
+            margin: 0 0 10px 0;
+            color: var(--neon-blue);
+            text-align: center;
+        }
+
+        .param-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .param-row label {
+            margin: 0;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .param-row input {
+            width: 80px;
+            background: #111;
+            border: 1px solid #444;
+            color: var(--neon-green);
+            padding: 5px;
+            font-family: 'Cyber', monospace;
+            text-align: center;
+            outline: none;
+        }
+
+        .param-row input:focus {
+            border-color: var(--neon-green);
+        }
+
+        .param-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .param-btns button {
+            flex: 1;
+            padding: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: 1px solid #444;
+            background: #222;
+            color: #eee;
+        }
+
+        .param-btns button.confirm {
+            border-color: var(--neon-blue);
+            color: var(--neon-blue);
+            background: rgba(0, 243, 255, 0.1);
+        }
+
+        .param-btns button.confirm:hover {
+            background: var(--neon-blue);
+            color: #000;
+        }
+
         /* 5. 底部操作区 */
         .menu-actions {
             display: flex;
@@ -1210,11 +1383,11 @@
             text-shadow: 0 0 5px var(--neon-blue);
         }
 
+        .btn-open-param-input:hover,
         .menu-btn:hover {
             background: var(--neon-blue);
             color: #000;
             box-shadow: 0 0 30px var(--neon-blue);
-
         }
 
         /* 强化按钮样式 */
@@ -1402,6 +1575,8 @@
 
         <div id="game-over-overlay" class="hidden">
             <div class="result-card">
+                <div id="btn-close-result" title="关闭结算卡">×</div>
+
                 <div class="card-header">
                     <h2 id="end-title">MISSION COMPLETE</h2>
                     <div class="scan-line"></div>
@@ -1437,7 +1612,7 @@
 
         <canvas id="ray-canvas"></canvas>
 
-        <div id="guide-text">点击标记安全区<br>从格子拖动（八方向）引爆隐藏地雷<br>鼠标滚轮/双指轻触缩放作战区</div>
+        <div id="guide-text">点击标记安全区<br>从格子拖动（八方向）引爆隐藏地雷<br>鼠标滚轮/双指轻触 缩放作战区<br>双指拖动捏合 缩放与平移作战区</div>
     </div>
 
     <div id="menu-overlay">
@@ -1478,7 +1653,11 @@
 
                 <div class="cyber-panel parameter-panel">
                     <h3 class="panel-title">
-                        <span class="deco-marker">►</span> 参数校准
+                        <span><span class="deco-marker">►</span> 参数校准</span>
+
+                        <button id="btn-open-param-input" class="input-param-btn hidden">
+                            [ 输入参数 ]
+                        </button>
                     </h3>
 
                     <div id="custom-settings" class="hidden">
@@ -1567,6 +1746,28 @@
         </div>
     </div>
 
+    <div id="param-input-overlay" class="hidden">
+        <div class="param-modal">
+            <h3>覆写系统参数</h3>
+            <div class="param-row">
+                <label>宽度 (8-256)</label>
+                <input type="number" id="manual-w" min="8" max="256">
+            </div>
+            <div class="param-row">
+                <label>高度 (8-256)</label>
+                <input type="number" id="manual-h" min="8" max="256">
+            </div>
+            <div class="param-row">
+                <label>密度 (5-100%)</label>
+                <input type="number" id="manual-d" min="5" max="100" step="5">
+            </div>
+            <div class="param-btns">
+                <button id="btn-param-confirm" class="confirm">写入</button>
+                <button id="btn-param-cancel">取消</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const CONFIG = {
             gridW: 10,
@@ -1610,6 +1811,8 @@
         let startCell = null;
         let isDragging = false;
         let dragLine = { x: 0, y: 0 };
+
+        let failOrigin = { x: 0, y: 0 };
 
         let isMuted = localStorage.getItem('mineseeker_mute') === 'true';
 
@@ -2223,7 +2426,7 @@
             }
 
             for (let d = 1; d <= maxDist; d++) {
-                setTimeout(() => {
+                let id = setTimeout(() => {
                     if (isGameOver) return;
 
                     animationQueue.forEach(item => {
@@ -2233,12 +2436,13 @@
                         }
                     });
                 }, d * stepDelay);
+                //window.failIntervals.push(id);
             }
 
             updateHUD();
         }
 
-        function revealRayPath(startX, startY, dirX, dirY) {
+        function revealRayPath(startX, startY, dirX, dirY, showEffect = true) {
             for (let i = 1; i <= CONFIG.rayLength; i++) {
                 const tx = startX + (dirX * i);
                 const ty = startY + (dirY * i);
@@ -2246,7 +2450,7 @@
 
                 const targetCell = gridData[ty][tx];
                 if (!targetCell.isMine && !targetCell.isRevealed) {
-                    targetCell.reveal();
+                    targetCell.reveal(showEffect);
                 }
             }
         }
@@ -2272,7 +2476,7 @@
                 playSound('mark');
             }
 
-            reveal() {
+            reveal(showEffect = true) {
                 if (this.isRevealed) return;
 
                 this.isRevealed = true;
@@ -2282,25 +2486,32 @@
 
                 if (this.isMine) {
                     this.element.classList.add('mine');
+
+                    if (totalMines > 200) {
+                        this.element.classList.add('no-pulse');
+                    }
+
                     this.element.textContent = '☢';
                     this.element.dataset.num = 'mine';
 
-                    this.element.classList.add('mine-flash');
-                    setTimeout(() => this.element.classList.remove('mine-flash'), 150);
+                    if (showEffect) {
+                        this.element.classList.add('mine-flash');
+                        setTimeout(() => this.element.classList.remove('mine-flash'), 150);
+                        playSound('explode');
+                        spawnExplosion(this.x, this.y, CONFIG.colors.red);
+
+                        const container = document.getElementById('game-container');
+                        container.classList.remove('shake');
+                        void container.offsetWidth;
+                        container.classList.add('shake');
+                    }
 
                     revealedMines++;
-                    playSound('explode');
-                    spawnExplosion(this.x, this.y, CONFIG.colors.red);
-
-                    const container = document.getElementById('game-container');
-                    container.classList.remove('shake');
-                    void container.offsetWidth;
-                    container.classList.add('shake');
 
                 } else {
                     if (this.neighborCount === 0) {
                         animatedFloodFill(this.x, this.y);
-                    } else {
+                    } else if (showEffect) {
                         spawnExplosion(this.x, this.y, 'rgba(0, 243, 255, 0.4)');
                     }
                 }
@@ -2366,7 +2577,7 @@
             return dpr;
         }
 
-        function initGame() {
+        function clearPendingEndEffects() {
             // 清理可能的旧延时操作
             if (window.failTimeout) clearTimeout(window.failTimeout);
             if (window.gameResultTimeout) clearTimeout(window.gameResultTimeout);
@@ -2374,8 +2585,14 @@
             window.failIntervals.forEach(id => clearTimeout(id));
             window.failIntervals = [];
 
-            resetZoom();
+            document.body.classList.remove('disable-mine-pulse');
+            document.body.classList.remove('failure-mode');
+        }
 
+
+        function initGame() {
+            clearPendingEndEffects();
+            resetZoom();
             stopTimer();
             elapsedTime = 0;
             document.getElementById('timer-display').textContent = "00:00";
@@ -2415,7 +2632,7 @@
             const sizeW = Math.floor(availableWidth / CONFIG.gridW);
             const sizeH = Math.floor(availableHeight / CONFIG.gridH);
 
-            // 上限 50 保持观感，下限给到 6~8，宁愿变小也别溢出
+            // 上限 50 保持观感，宁愿变小也别溢出
             let size = Math.min(sizeW, sizeH, 50);
             size = Math.max(size, 6);
 
@@ -2651,7 +2868,6 @@
         function startTimer() {
             if (timerInterval) return;
 
-            // ✅ 关键：支持暂停恢复
             gameStartTime = Date.now() - (elapsedTime * 1000);
 
             const display = document.getElementById('timer-display');
@@ -2684,6 +2900,8 @@
             wrapper.style.transform = '';
             isZoomed = false;
         }
+
+        function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
         function setupInput() {
             // 禁止网格区域默认右键菜单
@@ -2794,15 +3012,23 @@
             window.addEventListener('mousemove', moveDrag);
             window.addEventListener('mouseup', endDrag);
 
-            // ===== 双指轻点缩放（与单指拖动/点按合并）=====
+            // ===== 双指手势：轻点缩放(toggle) + 拉伸缩放(pinch) + 双指拖动(pan) =====
             let gridTouchSession = false;
             let currentZoomScale = 1;
 
-            let pinchTap = null;          // 双指轻点候选
-            let singleStartTimer = null;  // “等第二指”的延迟计时器
+            // 兼容旧的“双指轻点”
+            let pinchTap = null;
+
+            // 单指“等第二指”窗口
+            let singleStartTimer = null;
             let pendingSingleEvent = null;
 
-            function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+            // 新增：双指 pinch/pan 会话
+            let pinchSession = null;
+
+            let awaitingSecondFinger = false;
+            let firstTouchId = null;
+            let firstTouchTime = 0;
 
             function getDynamicZoomScale() {
                 const wrapper = document.getElementById('grid-wrapper');
@@ -2818,7 +3044,7 @@
                 const targetCellPx = 48; // 你可以调：44~56
                 const cellBasedScale = targetCellPx / CONFIG.cellSize;
 
-                // ✅ 关键：允许“超出屏幕”的程度（密网格给更大溢出空间）
+                // 关键：允许“超出屏幕”的程度（密网格给更大溢出空间）
                 // cellBasedScale 越大（说明格子越小越密），允许的溢出越多
                 const overflowFactor = clamp(1.3 + (cellBasedScale - 1) * 0.55, 1.3, 2.6);
 
@@ -2849,33 +3075,6 @@
                 startCell = null;
             }
 
-            function applyZoomAt(clientX, clientY, scale) {
-                const wrapper = document.getElementById('grid-wrapper');
-                const rect = wrapper.getBoundingClientRect();
-
-                const px = clientX - rect.left;
-                const py = clientY - rect.top;
-
-                const tx = clientX - rect.left - px * scale;
-                const ty = clientY - rect.top - py * scale;
-
-                wrapper.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
-            }
-
-            // ===== 鼠标滚轮：按鼠标所在位置缩放网格（最小改动）=====
-            function getWrapperMatrix(wrapper) {
-                const t = getComputedStyle(wrapper).transform;
-                if (!t || t === 'none') return { s: 1, tx: 0, ty: 0 };
-
-                // DOMMatrix 大部分现代浏览器支持；Safari 也OK（旧版可用 WebKitCSSMatrix）
-                const M = (window.DOMMatrix || window.WebKitCSSMatrix) ? new (window.DOMMatrix || window.WebKitCSSMatrix)(t) : null;
-                if (!M) return { s: 1, tx: 0, ty: 0 };
-
-                // 你的 transform 是 `translate(...) scale(...)`（CSS 从右到左应用 => 先 scale 后 translate）
-                // 所以矩阵里 a=d=scale, e/f=translate
-                return { s: M.a || 1, tx: M.e || 0, ty: M.f || 0 };
-            }
-
             // 在“当前 transform 基础上”，以 clientX/Y 为锚点缩放到 newScale
             function applyZoomAtKeepingPoint(clientX, clientY, newScale) {
                 const wrapper = document.getElementById('grid-wrapper');
@@ -2899,6 +3098,72 @@
                 const newTy = newTop - baseTop;
 
                 wrapper.style.transform = `translate(${newTx}px, ${newTy}px) scale(${newScale})`;
+            }
+
+            // ===== 鼠标滚轮：按鼠标所在位置缩放网格（最小改动）=====
+            function getWrapperMatrix(wrapper) {
+                const t = getComputedStyle(wrapper).transform;
+                if (!t || t === 'none') return { s: 1, tx: 0, ty: 0 };
+
+                // DOMMatrix 大部分现代浏览器支持；Safari 也OK（旧版可用 WebKitCSSMatrix）
+                const M = (window.DOMMatrix || window.WebKitCSSMatrix) ? new (window.DOMMatrix || window.WebKitCSSMatrix)(t) : null;
+                if (!M) return { s: 1, tx: 0, ty: 0 };
+
+                // 你的 transform 是 `translate(...) scale(...)`（CSS 从右到左应用 => 先 scale 后 translate）
+                // 所以矩阵里 a=d=scale, e/f=translate
+                return { s: M.a || 1, tx: M.e || 0, ty: M.f || 0 };
+            }
+
+            // 统一设置 transform
+            function setWrapperTransform(tx, ty, s) {
+                const wrapper = document.getElementById('grid-wrapper');
+                wrapper.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
+            }
+
+            function clampTransformKeepCenterInside(tx, ty, s) {
+                const wrapper = document.getElementById('grid-wrapper');
+
+                // 先应用一次得到 rect（rect 依赖 transform）
+                setWrapperTransform(tx, ty, s);
+                let rect = wrapper.getBoundingClientRect();
+
+                const cx = window.innerWidth / 2;
+                const cy = window.innerHeight / 2;
+
+                let fixX = 0, fixY = 0;
+
+                // 让屏幕中心点始终落在 rect 内
+                if (cx < rect.left) fixX = cx - rect.left;
+                if (cx > rect.right) fixX = cx - rect.right;
+
+                if (cy < rect.top) fixY = cy - rect.top;
+                if (cy > rect.bottom) fixY = cy - rect.bottom;
+
+                if (fixX || fixY) {
+                    tx += fixX;
+                    ty += fixY;
+                    setWrapperTransform(tx, ty, s);
+                    rect = wrapper.getBoundingClientRect();
+                }
+
+                return { tx, ty, s };
+            }
+
+            function endPinchSessionCleanup() {
+                pinchSession = null;
+            }
+
+            function applyZoomAt(clientX, clientY, scale) {
+                const wrapper = document.getElementById('grid-wrapper');
+                const rect = wrapper.getBoundingClientRect();
+
+                const px = clientX - rect.left;
+                const py = clientY - rect.top;
+
+                const tx = clientX - rect.left - px * scale;
+                const ty = clientY - rect.top - py * scale;
+
+                wrapper.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
             }
 
             // 监听滚轮
@@ -2930,68 +3195,213 @@
                 applyZoomAtKeepingPoint(e.clientX, e.clientY, nextS);
             }, { passive: false });
 
+            function beginPinchWithTwoTouches(t0, t1) {
+                cancelSingleStart();
+                cancelDraggingNow();
 
-            // touchstart：根据 touches 数量决定走哪条路
+                const wrapper = document.getElementById('grid-wrapper');
+
+                const midX = (t0.clientX + t1.clientX) / 2;
+                const midY = (t0.clientY + t1.clientY) / 2;
+                const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+
+                const rect = wrapper.getBoundingClientRect();
+                const { s: startS, tx: startTx, ty: startTy } = getWrapperMatrix(wrapper);
+
+                const baseLeft = rect.left - startTx;
+                const baseTop = rect.top - startTy;
+
+                const localX = (midX - rect.left) / startS;
+                const localY = (midY - rect.top) / startS;
+
+                pinchSession = {
+                    startTime: performance.now(),
+                    startS, startTx, startTy,
+                    baseLeft, baseTop,
+                    startMidX: midX, startMidY: midY,
+                    localX, localY,
+                    startDist: Math.max(8, dist),
+                    moved: false
+                };
+
+                pinchTap = {
+                    time: pinchSession.startTime,
+                    x0: t0.clientX, y0: t0.clientY,
+                    x1: t1.clientX, y1: t1.clientY,
+                    moved: false
+                };
+
+                awaitingSecondFinger = false;
+                firstTouchId = null;
+            }
+
+            // ===== touchstart：单指延迟 or 双指进入 pinch =====
             gridEl.addEventListener('touchstart', (e) => {
                 if (isGameOver || isPaused) return;
 
-                // 必须阻止默认，否则会触发页面滚动/双指缩放等
                 e.preventDefault();
                 gridTouchSession = true;
 
-                // 1) 双指出现：进入“双指轻点候选”，并取消任何单指逻辑
+                // 双指：开始 pinch / pan
                 if (e.touches.length === 2) {
                     cancelSingleStart();
                     cancelDraggingNow();
 
+                    const wrapper = document.getElementById('grid-wrapper');
                     const t0 = e.touches[0], t1 = e.touches[1];
+
+                    const midX = (t0.clientX + t1.clientX) / 2;
+                    const midY = (t0.clientY + t1.clientY) / 2;
+                    const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+
+                    const rect = wrapper.getBoundingClientRect();
+                    const { s: startS, tx: startTx, ty: startTy } = getWrapperMatrix(wrapper);
+
+                    // baseLeft/baseTop：未变换前（布局）位置（用于稳定锚点计算）
+                    const baseLeft = rect.left - startTx;
+                    const baseTop = rect.top - startTy;
+
+                    // 记录：当前 mid 在内容坐标(未缩放)下的位置
+                    const localX = (midX - rect.left) / startS;
+                    const localY = (midY - rect.top) / startS;
+
+                    pinchSession = {
+                        startTime: performance.now(),
+                        startS,
+                        startTx,
+                        startTy,
+                        baseLeft,
+                        baseTop,
+                        startMidX: midX,
+                        startMidY: midY,
+                        localX,
+                        localY,
+                        startDist: Math.max(8, dist),
+                        moved: false
+                    };
+
+                    // 双指轻点候选（兼容旧逻辑）
                     pinchTap = {
-                        time: performance.now(),
+                        time: pinchSession.startTime,
                         x0: t0.clientX, y0: t0.clientY,
                         x1: t1.clientX, y1: t1.clientY
                     };
                     return;
                 }
 
-                // 2) 单指：不要立刻 startDrag —— 给一个很短窗口等第二指
-                //    这样避免“双指不同时落下”导致误触发单指点/拖
+                // 单指：给一个极短窗口等第二指，避免“双指不同时落下”误触发单指
                 if (e.touches.length === 1) {
-                    pinchTap = null; // 清掉任何旧状态
+                    pinchTap = null;
+                    pinchSession = null;
                     cancelSingleStart();
+
+                    awaitingSecondFinger = true;
+                    firstTouchId = e.touches[0].identifier;
+                    firstTouchTime = performance.now();
 
                     pendingSingleEvent = e;
 
                     singleStartTimer = setTimeout(() => {
-                        // 超时仍然是单指：按原逻辑开始
                         if (!pendingSingleEvent) return;
                         startDrag(pendingSingleEvent);
                         pendingSingleEvent = null;
                         singleStartTimer = null;
-                    }, 90); // 80~120ms 都行：越小越灵敏，越大越不易误判
+                    }, 90);
                 }
             }, { passive: false });
+
+            // 第一指在 grid 内开始时，第二指即使落在 grid 外，也能识别为双指
+            window.addEventListener('touchstart', (e) => {
+                if (!gridTouchSession) return;
+                if (isGameOver || isPaused) return;
+
+                // 只有在“等第二指”的短窗口内才接管，避免干扰页面其它双指操作
+                if (!awaitingSecondFinger) return;
+                if (!singleStartTimer) return; // 只在 90ms 窗口内
+
+                if (e.touches.length >= 2) {
+                    // 可选：再加一道时间保险
+                    if (performance.now() - firstTouchTime > 150) return;
+
+                    // 找到第一指（identifier 匹配）和另一指
+                    let tFirst = null, tOther = null;
+                    for (const t of e.touches) {
+                        if (t.identifier === firstTouchId) tFirst = t;
+                        else tOther = t;
+                    }
+
+                    // 如果没找到（极少数边缘情况），就退化为取前两指
+                    if (!tFirst || !tOther) {
+                        tFirst = e.touches[0];
+                        tOther = e.touches[1];
+                    }
+
+                    // 阻止默认（避免页面滚动/系统缩放抢走）
+                    if (e.cancelable) e.preventDefault();
+
+                    beginPinchWithTwoTouches(tFirst, tOther);
+                }
+            }, { passive: false, capture: true });
 
             window.addEventListener('touchmove', (e) => {
                 if (!gridTouchSession) return;
                 if (isGameOver || isPaused) return;
+
                 e.preventDefault();
 
-                // 如果第二指在“等待窗口”内出现了，touchmove 也应阻止单指逻辑
-                if (e.touches.length === 2) {
-                    // 只要双指移动，就不是“轻点”了
+                // 双指 pinch/pan
+                if (e.touches.length === 2 && pinchSession) {
+                    const wrapper = document.getElementById('grid-wrapper');
+                    const t0 = e.touches[0], t1 = e.touches[1];
+
+                    const midX = (t0.clientX + t1.clientX) / 2;
+                    const midY = (t0.clientY + t1.clientY) / 2;
+                    const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+
+                    // 是否还是“轻点”候选：只要移动就取消轻点
                     if (pinchTap) {
-                        const t0 = e.touches[0], t1 = e.touches[1];
                         const move =
                             Math.hypot(t0.clientX - pinchTap.x0, t0.clientY - pinchTap.y0) +
                             Math.hypot(t1.clientX - pinchTap.x1, t1.clientY - pinchTap.y1);
-                        if (move > 18) {
-                            pinchTap = null;
-                        }
+                        if (move > 18) pinchTap = null;
                     }
+
+                    const maxS = getDynamicZoomScale() * 2;
+                    let nextS = pinchSession.startS * (dist / pinchSession.startDist);
+                    nextS = clamp(nextS, 0.5, maxS);
+
+                    // 只要 mid 变化或 scale 变化到一定程度就认为是“手势移动”
+                    const midMove = Math.hypot(midX - pinchSession.startMidX, midY - pinchSession.startMidY);
+                    const scaleMove = Math.abs(nextS - pinchSession.startS);
+                    if (midMove > 6 || scaleMove > 0.02) pinchSession.moved = true;
+
+                    // 让 pinchStart 时的 local 点，在 nextS 下依旧落在 “当前 mid”
+                    const newLeft = midX - pinchSession.localX * nextS;
+                    const newTop = midY - pinchSession.localY * nextS;
+
+                    let nextTx = newLeft - pinchSession.baseLeft;
+                    let nextTy = newTop - pinchSession.baseTop;
+
+                    // 轻量边界约束（避免拖飞）
+                    const clamped = clampTransformKeepCenterInside(nextTx, nextTy, nextS);
+                    nextTx = clamped.tx; nextTy = clamped.ty; nextS = clamped.s;
+
+                    // 更新状态
+                    currentZoomScale = nextS;
+                    isZoomed = !(0.92 <= nextS && nextS <= 1.08);
+
+                    // 如果非常接近 1，就当回到默认，避免残留 translate
+                    if (!isZoomed) {
+                        resetZoom();
+                        currentZoomScale = 1;
+                    } else {
+                        setWrapperTransform(nextTx, nextTy, nextS);
+                    }
+
                     return;
                 }
 
-                // 单指 move：如果还在等第二指，不做任何事（避免误触拖动）
+                // 单指 move：如果还在等第二指，不做任何事
                 if (singleStartTimer) return;
 
                 // 正常单指拖动
@@ -3000,23 +3410,33 @@
 
             window.addEventListener('touchend', (e) => {
                 if (!gridTouchSession) return;
+
                 const shouldEndSession = (e.touches.length === 0);
+
+                if (e.touches.length === 0) {
+                    awaitingSecondFinger = false;
+                    firstTouchId = null;
+                }
 
                 if (isGameOver || isPaused) {
                     if (shouldEndSession) {
                         gridTouchSession = false;
-                        pinchTap = null;
+                        endPinchSessionCleanup();
                         cancelSingleStart();
                         cancelDraggingNow();
                     }
                     return;
                 }
+
                 e.preventDefault();
 
-                // 双指轻点判定：两指都抬起（最终 touches=0）才触发一次
+                // 双指轻点 toggle：最后一根手指抬起（touches=0）时触发
+                // 不能依赖 pinchSession，因为很多设备是“先后抬起”
                 if (pinchTap && e.touches.length === 0) {
                     const dt = performance.now() - pinchTap.time;
-                    if (dt <= 260) {
+                    const moved = !!pinchTap.moved;
+
+                    if (!moved && dt <= 260) {
                         const cx = (pinchTap.x0 + pinchTap.x1) / 2;
                         const cy = (pinchTap.y0 + pinchTap.y1) / 2;
 
@@ -3026,21 +3446,35 @@
                             applyZoomAt(cx, cy, currentZoomScale);
                         } else {
                             resetZoom();
+                            currentZoomScale = 1;
                         }
+
+                        pinchTap = null;
+                        endPinchSessionCleanup(); // 保险：清 pinchSession
+                        cancelSingleStart();
+                        gridTouchSession = false;
+                        return;
                     }
+
+                    // 不符合条件就清掉候选
                     pinchTap = null;
-                    cancelSingleStart();
-                    gridTouchSession = false;
+                }
+
+                // pinch 会话：任意一指抬起（变成 1 指）就结束 pinch
+                if (pinchSession && e.touches.length < 2) {
+                    if (pinchTap) pinchTap.moved = pinchSession.moved;
+
+                    // 结束 pinchSession，但不清 pinchTap（等最后一根手指抬起再判定轻触）
+                    endPinchSessionCleanup();
+
+                    // 这里不自动把剩下那根手指接管成“单指拖动”，避免误触操作格子。
+                    // 用户如果要单指操作，松开后再重新点即可。
+                    if (shouldEndSession) gridTouchSession = false;
                     return;
                 }
 
-                // 触发单指 end：如果还没到 startDrag 的延迟时间，说明是单击/短按
-                // 这里直接“立刻执行一次 startDrag + endDrag”会很危险（会触发你的拖判定阈值）
-                // 最小做法：如果延迟未触发，直接取消计时器并按“点击”走 endDrag 的现有逻辑是不成立的
-                // 所以：让原来 endDrag 处理即可，但要确保 startDrag 真正发生过才调用
+                // 单指：如果还没到 startDrag 的延迟时间，属于快速点一下
                 if (singleStartTimer) {
-                    // 这是“快速点一下”但在90ms内结束：
-                    // 直接把 pendingSingleEvent 立刻 startDrag 再 endDrag，保证你现有“点/拖判定”不改
                     clearTimeout(singleStartTimer);
                     singleStartTimer = null;
 
@@ -3049,6 +3483,8 @@
                         pendingSingleEvent = null;
                         endDrag(e);
                     }
+
+                    if (shouldEndSession) gridTouchSession = false;
                     return;
                 }
 
@@ -3060,7 +3496,9 @@
 
             window.addEventListener('touchcancel', (e) => {
                 gridTouchSession = false;
-                pinchTap = null;
+                awaitingSecondFinger = false;
+                firstTouchId = null;
+                endPinchSessionCleanup();
                 cancelSingleStart();
                 cancelDraggingNow();
             }, { passive: false });
@@ -3087,78 +3525,123 @@
             } else {
                 cell.element.style.backgroundColor = "var(--neon-red)";
                 spawnExplosion(x, y, CONFIG.colors.red);
+                failOrigin = { x, y };
                 gameOver(false);
             }
         }
 
         let endDuration = 0.0;
 
-        function triggerChainFailure() {
+        function triggerChainFailure(onDone) {
             hudStatus.textContent = "系统崩溃";
             hudStatus.style.color = "var(--neon-red)";
+            document.body.classList.add('failure-mode');
             playSound('error');
 
-            const hiddenMines = [];
+            // 扩散源：失败点
+            const ox = failOrigin?.x ?? 0;
+            const oy = failOrigin?.y ?? 0;
+
+            // 收集所有未揭示格子，按“切比雪夫距离”（像波纹方块圈）分层
+            const buckets = [];
+            let maxDist = 0;
+
             for (let y = 0; y < CONFIG.gridH; y++) {
                 for (let x = 0; x < CONFIG.gridW; x++) {
-                    if (gridData[y][x].isMine && !gridData[y][x].isRevealed) {
-                        hiddenMines.push(gridData[y][x]);
-                    }
+                    const cell = gridData[y][x];
+                    if (cell.isRevealed) continue;
+
+                    const d = Math.max(Math.abs(x - ox), Math.abs(y - oy)); // 一圈圈方形扩散
+                    if (!buckets[d]) buckets[d] = [];
+                    buckets[d].push(cell);
+                    if (d > maxDist) maxDist = d;
                 }
             }
 
-            hiddenMines.sort(() => Math.random() - 0.5);
-
-            // 动态间隔计算
-            let interval = 300;
-            if (hiddenMines.length > 10) {
-                // 如果雷多于10个，确保在3000ms内炸完
-                interval = 3000 / hiddenMines.length;
+            // 没啥可揭就直接结束
+            if (maxDist === 0 && (!buckets[0] || buckets[0].length === 0)) {
+                endDuration = 0;
+                return;
             }
 
-            // 清理旧的定时器数组
-            window.failIntervals = [];
-            endDuration = interval * hiddenMines.length;
+            const totalDuration = 1000;            // 扩散总时长
+            const stepDelay = Math.max(12, Math.floor(totalDuration / Math.max(1, maxDist))); // 每圈间隔
+            endDuration = stepDelay * (maxDist + 1);
 
-            hiddenMines.forEach((cell, index) => {
-                const id = setTimeout(() => {
+            // 清理旧失败动画
+            window.failIntervals = window.failIntervals || [];
+            window.failIntervals.forEach(id => clearTimeout(id));
+            window.failIntervals = [];
+            if (window.failRafId) cancelAnimationFrame(window.failRafId);
+            window.failRafId = 0;
+
+            // === 核心：分帧刷圈 ===
+            const totalCells = CONFIG.gridW * CONFIG.gridH;
+            const budgetPerFrame = Math.max(80, Math.min(800, Math.floor(totalCells / 30))); // 可微调
+
+            let cur = 0;        // 当前圈
+            let iInRing = 0;    // 当前圈刷到第几个
+            let lastStepTime = performance.now();
+
+            function revealCellSilent(cell) {
+                cell.isRevealed = true;
+                cell.isMarked = false;
+
+                if (cell.isMine) {
+                    // 不走 reveal()，避免连锁/特效/HUD 连刷
+                    cell.element.classList.add('revealed');
                     cell.element.classList.add('mine');
                     cell.element.textContent = '☢';
-                    cell.element.classList.add('mine-flash');
-                    setTimeout(() => cell.element.classList.remove('mine-flash'), 150);
 
-                    playSound('explode');
-                    spawnExplosion(cell.x, cell.y, CONFIG.colors.red);
+                    if (totalMines > 200) {
+                        cell.element.classList.add('no-pulse'); // 创建时就关动画
+                    }
+                } else {
+                    cell.updateVisuals();
+                }
+            }
 
-                    const dirs = [
-                        { x: 0, y: -1 }, { x: 1, y: -1 }, { x: 1, y: 0 }, { x: 1, y: 1 },
-                        { x: 0, y: 1 }, { x: -1, y: 1 }, { x: -1, y: 0 }, { x: -1, y: -1 }
-                    ];
-                    dirs.forEach(d => {
-                        const { distance, path } = calculateRayPath(cell.x, cell.y, d.x, d.y);
-                        spawnRay(cell.x, cell.y, d.x, d.y, distance, true);
-                        revealRayPath(cell.x, cell.y, d.x, d.y);
-                    });
+            function loop(now) {
+                // 控制“圈与圈之间”的节奏：到点才推进下一圈
+                while (cur <= maxDist && (now - lastStepTime) >= stepDelay && iInRing >= ((buckets[cur]?.length) || 0)) {
+                    cur++;
+                    iInRing = 0;
+                    lastStepTime += stepDelay;
+                }
 
-                }, index * interval);
-                window.failIntervals.push(id);
-            });
+                // 如果最后一圈也刷完了 => 完成
+                if (cur > maxDist) {
+                    window.failRafId = 0;
+                    if (onDone) onDone();
+                    return;
+                }
 
-            const finalRevealId = setTimeout(() => {
-                for (let y = 0; y < CONFIG.gridH; y++) {
-                    for (let x = 0; x < CONFIG.gridW; x++) {
-                        const cell = gridData[y][x];
-                        if (!cell.isRevealed && !cell.isMine) {
-                            cell.isRevealed = true;
-                            cell.isMarked = false;
-                            // 静默更新视觉，不播放声音，不带动画，仿佛系统彻底死机显示数据
-                            cell.updateVisuals();
-                        }
+                // 本帧预算：只刷这么多个格子，避免卡顿
+                let budget = budgetPerFrame;
+
+                while (budget-- > 0 && cur <= maxDist) {
+                    const list = buckets[cur];
+                    if (!list || list.length === 0) {
+                        // 空圈，直接当刷完
+                        iInRing = 0;
+                        // 不强行 ++cur：交给上面的 stepDelay 逻辑推进（保持圈节奏）
+                        break;
+                    }
+
+                    if (iInRing < list.length) {
+                        const cell = list[iInRing++];
+                        // 只处理未揭示，避免重复写 DOM
+                        if (!cell.isRevealed) revealCellSilent(cell);
+                    } else {
+                        // 当前圈刷完了：等待 stepDelay 到点再进下一圈（保持波纹节奏）
+                        break;
                     }
                 }
-            }, endDuration);
 
-            window.failIntervals.push(finalRevealId);
+                window.failRafId = requestAnimationFrame(loop);
+            }
+
+            window.failRafId = requestAnimationFrame(loop);
         }
 
         function checkWinCondition() {
@@ -3174,16 +3657,38 @@
             resetZoom();
 
             isGameOver = true;
+
+            if (window.gameResultTimeout) {
+                clearTimeout(window.gameResultTimeout);
+            }
             if (!win) {
-                triggerChainFailure();
-                // 注意：失败时我们稍后弹出界面，但数据现在就要准备好
+                // 失败扩散动画播完再弹结算，保证大网格也不会“没播完就进结算”
+                triggerChainFailure(() => {
+                    // 动画真正结束后再弹结算
+                    window.gameResultTimeout = setTimeout(() => showGameOverCard(win), 1500);
+                });
             } else {
                 // 胜利直接处理
                 hudStatus.textContent = "胜利";
                 hudStatus.style.color = "var(--neon-green)";
                 playSound('hover');
-            }
 
+                for (let y = 0; y < CONFIG.gridH; y++) {
+                    for (let x = 0; x < CONFIG.gridW; x++) {
+                        const cell = gridData[y][x];
+                        if (!cell.isRevealed && !cell.isMine) {
+                            cell.isRevealed = true;
+                            cell.isMarked = false;
+                            cell.updateVisuals();
+                        }
+                    }
+                }
+
+                window.gameResultTimeout = setTimeout(() => showGameOverCard(win), 1500);
+            }
+        }
+
+        function showGameOverCard(win) {
             // 准备界面数据
             const card = document.querySelector('.result-card');
             const title = document.getElementById('end-title');
@@ -3200,29 +3705,22 @@
             // 移除旧主题
             card.classList.remove('win-theme', 'lose-theme');
 
-            // 延迟显示逻辑 (为了配合爆炸动画)
-            const showDelay = win ? 1500 : (endDuration + 1500);
-
-            if (window.gameResultTimeout) clearTimeout(window.gameResultTimeout);
-
-            window.gameResultTimeout = setTimeout(() => {
-                if (win) {
-                    title.textContent = "SYSTEM PURGED";
-                    title.className = "win"; // 保持文字颜色逻辑
-                    card.classList.add('win-theme');
-                    pctDisplay.textContent = "100%";
-                    reasonText.textContent = "所有威胁已消除，系统恢复正常。";
-                } else {
-                    title.textContent = "CONNECTION LOST";
-                    title.className = "lose";
-                    card.classList.add('lose-theme');
-                    // 计算完成度
-                    const pct = Math.floor((revealedMines / totalMines) * 100);
-                    pctDisplay.textContent = `${pct}% THREATS NEUTRALIZED`;
-                    reasonText.textContent = "逻辑链路崩溃，协议执行失败。";
-                }
-                overlay.classList.remove('hidden');
-            }, showDelay);
+            if (win) {
+                title.textContent = "SYSTEM PURGED";
+                title.className = "win";
+                card.classList.add('win-theme');
+                pctDisplay.textContent = "100%";
+                reasonText.textContent = "所有威胁已消除，系统恢复正常。";
+            } else {
+                title.textContent = "CONNECTION LOST";
+                title.className = "lose";
+                card.classList.add('lose-theme');
+                // 计算完成度
+                const pct = Math.floor((revealedMines / totalMines) * 100);
+                pctDisplay.textContent = `${pct}% THREATS NEUTRALIZED`;
+                reasonText.textContent = "逻辑链路崩溃，协议执行失败。";
+            }
+            overlay.classList.remove('hidden');
         }
 
         function updateHUD() {
@@ -3248,6 +3746,20 @@
             'ultimate': { w: 30, h: 30, d: 30, adaptive: false }
         };
 
+        // 滑块默认密度范围
+        const DEFAULT_RANGE = {
+            w: { min: 8, max: 32 },
+            h: { min: 8, max: 32 },
+            d: { min: 25, max: 75 }
+        };
+
+        // 真实值（来源：拖 slider 或手动输入）
+        const PARAM_STATE = {
+            w: parseInt(inpW.value, 10),
+            h: parseInt(inpH.value, 10),
+            d: parseInt(inpD.value, 10)
+        };
+
         function getAdaptiveDimensions(baseW, baseH) {
             const isLandscape = window.innerWidth > window.innerHeight;
             const short = Math.min(baseW, baseH);
@@ -3265,12 +3777,21 @@
             document.getElementById('val-d').textContent = inpD.value + '%';
         }
 
-        [inpW, inpH, inpD].forEach(el => {
-            el.addEventListener('input', () => {
-                updateSliderLabels();
-                // 如果用户动了滑块，自动切到自定义模式（但为了逻辑简单，这里只更新数值，模式切换由下拉框决定）
-            });
+        inpW.addEventListener('input', () => {
+            PARAM_STATE.w = parseInt(inpW.value, 10);
+            updateLabelsFromState();
         });
+
+        inpH.addEventListener('input', () => {
+            PARAM_STATE.h = parseInt(inpH.value, 10);
+            updateLabelsFromState();
+        });
+
+        inpD.addEventListener('input', () => {
+            PARAM_STATE.d = parseInt(inpD.value, 10);
+            updateLabelsFromState();
+        });
+
 
         diffSelect.addEventListener('change', () => {
             applyMode(diffSelect.value);
@@ -3289,6 +3810,8 @@
             'custom': "手动覆写系统参数。允许操作员自定义网格尺寸与威胁密度。请注意：密度越低，容错率越低。"
         };
 
+        const btnParam = document.getElementById('btn-open-param-input');
+
         function applyMode(mode) {
             if (protocolDesc && DESCRIPTIONS[mode]) {
                 protocolDesc.textContent = DESCRIPTIONS[mode];
@@ -3297,9 +3820,11 @@
             if (mode === 'custom') {
                 // 自定义模式：显示滑块，不强制修改数值
                 customSettings.classList.remove('hidden');
+                if (btnParam) btnParam.classList.remove('hidden');
             } else if (PRESETS[mode]) {
                 // 预设模式：隐藏滑块
                 customSettings.classList.add('hidden');
+                if (btnParam) btnParam.classList.add('hidden');
 
                 const p = PRESETS[mode];
                 let targetW = p.w;
@@ -3312,10 +3837,10 @@
                     targetH = dims.h;
                 }
 
-                inpW.value = targetW;
-                inpH.value = targetH;
-                inpD.value = p.d;
-                updateSliderLabels();
+                PARAM_STATE.w = targetW;
+                PARAM_STATE.h = targetH;
+                PARAM_STATE.d = p.d;
+                syncSlidersFromState();
             }
         }
 
@@ -3347,8 +3872,7 @@
             initGame();
         });
 
-        // === 修改后的菜单按钮逻辑 ===
-        document.getElementById('btn-ingame-menu').addEventListener('click', () => {
+        function backToMenu() {
             // 1. 立即停止计时器 (核心修复：防止背景时间继续走)
             stopTimer();
 
@@ -3356,11 +3880,7 @@
             isGameOver = true;
 
             // 3. 清理所有可能的失败动画/延时
-            if (window.failTimeout) clearTimeout(window.failTimeout);
-            if (window.gameResultTimeout) clearTimeout(window.gameResultTimeout);
-            window.failIntervals = window.failIntervals || [];
-            window.failIntervals.forEach(id => clearTimeout(id));
-            window.failIntervals = [];
+            clearPendingEndEffects();
 
             // 4. 更新 HUD 状态
             hudStatus.textContent = "已挂起";
@@ -3373,6 +3893,11 @@
             menuOverlay.classList.remove('hidden');
 
             applyMode(diffSelect.value);
+        }
+
+        // === 修改后的菜单按钮逻辑 ===
+        document.getElementById('btn-ingame-menu').addEventListener('click', () => {
+            backToMenu();
         });
 
         // 监听窗口大小变化以重新计算布局（可选，简单起见直接重置可能更好，或者动态调整 grid-wrapper）
@@ -3398,9 +3923,9 @@
             applyMode(mode);
 
             // 再把 UI 的最终值写回 CONFIG
-            CONFIG.gridW = parseInt(inpW.value, 10);
-            CONFIG.gridH = parseInt(inpH.value, 10);
-            CONFIG.density = parseInt(inpD.value, 10) / 100;
+            CONFIG.gridW = PARAM_STATE.w;
+            CONFIG.gridH = PARAM_STATE.h;
+            CONFIG.density = PARAM_STATE.d / 100;
 
             return mode;
         }
@@ -3430,18 +3955,18 @@
 
                     // 尝试读取 w, h, d 参数
                     if (params.has('w') && params.has('h') && params.has('d')) {
-                        const w = parseInt(params.get('w')) || 10;
-                        const h = parseInt(params.get('h')) || 15;
-                        const d = parseInt(params.get('d')) || 30;
+                        const w = parseInt(params.get('w')) || 8;
+                        const h = parseInt(params.get('h')) || 8;
+                        const d = parseInt(params.get('d')) || 70;
 
-                        inpW.value = w;
-                        inpH.value = h;
-                        inpD.value = d;
-                        updateSliderLabels();
+                        PARAM_STATE.w = w;
+                        PARAM_STATE.h = h;
+                        PARAM_STATE.d = d;
+                        syncSlidersFromState();
 
-                        CONFIG.gridW = w;
-                        CONFIG.gridH = h;
-                        CONFIG.density = d / 100;
+                        CONFIG.gridW = PARAM_STATE.w;
+                        CONFIG.gridH = PARAM_STATE.h;
+                        CONFIG.density = PARAM_STATE.d / 100;
                         return true; // 自动开始
                     }
                 }
@@ -3453,31 +3978,46 @@
             return false;
         }
 
+        window.addEventListener('popstate', () => {
+            backToMenu();
+            // 重新解析当前 URL 并更新界面
+            loadSettingsFromURL();
+        });
+
         function updateURLSettings(mode, w, h, d) {
-            const url = new URL(window.location);
+            const currentUrl = window.location.pathname + window.location.search;
+
+            const url = new URL(window.location.href);
 
             // 总是写入 mode
             url.searchParams.set('mode', mode);
 
             if (mode === 'custom') {
-                // 只有自定义模式才写入 w, h, d
                 url.searchParams.set('w', w);
                 url.searchParams.set('h', h);
                 url.searchParams.set('d', d);
             } else {
-                // 非自定义模式，移除 w, h, d
                 url.searchParams.delete('w');
                 url.searchParams.delete('h');
                 url.searchParams.delete('d');
             }
 
-            window.history.replaceState({}, '', url);
+            const nextUrl = url.pathname + url.search;
+
+            if (nextUrl !== currentUrl) {
+                window.history.pushState({}, '', nextUrl);
+            }
         }
 
         function clearURLSettings() {
-            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-            window.history.replaceState({}, '', cleanUrl);
+            const currentUrl = window.location.pathname + window.location.search;
+            const cleanUrl = window.location.pathname;
+
+            if (currentUrl !== cleanUrl) {
+                window.history.pushState({}, '', cleanUrl);
+            }
         }
+
 
         function setupUISounds() {
             // 1. 按钮、下拉框、头像链接
@@ -3561,6 +4101,89 @@
         } else {
             menuOverlay.classList.remove('hidden');
         }
+
+        // === 新增：参数输入逻辑 ===
+        const paramOverlay = document.getElementById('param-input-overlay');
+        const manualW = document.getElementById('manual-w');
+        const manualH = document.getElementById('manual-h');
+        const manualD = document.getElementById('manual-d');
+
+        // 打开弹窗：回显当前滑块的值
+        document.getElementById('btn-open-param-input').addEventListener('click', () => {
+            manualW.value = inpW.value;
+            manualH.value = inpH.value;
+            manualD.value = inpD.value;
+            paramOverlay.classList.remove('hidden');
+            playSound('ui-click');
+        });
+
+        // 关闭弹窗
+        document.getElementById('btn-param-cancel').addEventListener('click', () => {
+            paramOverlay.classList.add('hidden');
+            playSound('ui-click');
+        });
+
+        // 确认输入
+        document.getElementById('btn-param-confirm').addEventListener('click', () => {
+            let w = Math.max(8, Math.min(256, parseInt(manualW.value) || 8));
+            let h = Math.max(8, Math.min(256, parseInt(manualH.value) || 8));
+            let d = Math.max(5, Math.min(100, parseInt(manualD.value) || 70));
+
+            PARAM_STATE.w = w;
+            PARAM_STATE.h = h;
+            PARAM_STATE.d = d;
+
+            // slider 不扩范围，只做映射显示（越界就顶到边界）
+            syncSlidersFromState();
+
+            paramOverlay.classList.add('hidden');
+            playSound('ui-click');
+        });
+
+
+        function syncSlidersFromState() {
+            // slider 的 min/max 永远不变（保持默认）
+            inpW.min = DEFAULT_RANGE.w.min; inpW.max = DEFAULT_RANGE.w.max;
+            inpH.min = DEFAULT_RANGE.h.min; inpH.max = DEFAULT_RANGE.h.max;
+            inpD.min = DEFAULT_RANGE.d.min; inpD.max = DEFAULT_RANGE.d.max;
+
+            // 把真实值映射到 slider 上：越界就顶到边界
+            inpW.value = clamp(PARAM_STATE.w, DEFAULT_RANGE.w.min, DEFAULT_RANGE.w.max);
+            inpH.value = clamp(PARAM_STATE.h, DEFAULT_RANGE.h.min, DEFAULT_RANGE.h.max);
+            inpD.value = clamp(PARAM_STATE.d, DEFAULT_RANGE.d.min, DEFAULT_RANGE.d.max);
+
+            updateLabelsFromState();
+        }
+
+        function updateLabelsFromState() {
+            // label 显示真实值，而不是 slider.value
+            document.getElementById('val-w').textContent = PARAM_STATE.w;
+            document.getElementById('val-h').textContent = PARAM_STATE.h;
+            document.getElementById('val-d').textContent = PARAM_STATE.d + '%';
+
+            // 可选：给越界一个提示样式（比如把 label 变黄/加 *）
+            // 这里用简单的 * 标记
+            const wEl = document.getElementById('val-w');
+            const hEl = document.getElementById('val-h');
+            const dEl = document.getElementById('val-d');
+
+            wEl.dataset.oob = (PARAM_STATE.w < DEFAULT_RANGE.w.min || PARAM_STATE.w > DEFAULT_RANGE.w.max) ? "1" : "";
+            hEl.dataset.oob = (PARAM_STATE.h < DEFAULT_RANGE.h.min || PARAM_STATE.h > DEFAULT_RANGE.h.max) ? "1" : "";
+            dEl.dataset.oob = (PARAM_STATE.d < DEFAULT_RANGE.d.min || PARAM_STATE.d > DEFAULT_RANGE.d.max) ? "1" : "";
+        }
+
+        // === 结算弹窗关闭按钮逻辑 ===
+        const btnCloseResult = document.getElementById('btn-close-result');
+
+        btnCloseResult.addEventListener('click', () => {
+            // 隐藏遮罩层
+            document.getElementById('game-over-overlay').classList.add('hidden');
+
+            // 播放点击音效
+            playSound('ui-click');
+        });
+
+        btnCloseResult.addEventListener('mouseenter', () => playSound('hover'));
     </script>
 </body>
 
