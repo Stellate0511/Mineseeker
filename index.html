@@ -650,6 +650,7 @@
             border-bottom: 1px solid #333;
             position: relative;
             overflow: hidden;
+            padding-left: 40px;
             padding-right: 40px;
         }
 
@@ -738,6 +739,12 @@
             font-weight: bold;
             font-family: 'Cyber', monospace;
             font-size: 1.1rem;
+
+            text-align: right;
+            /* 强制文本靠右对齐，解决折行后居左的问题 */
+            max-width: 90%;
+            /* 限制最大宽度，强制长文本换行，保护左侧 Label */
+            line-height: 1.2;
         }
 
         .flavor-text {
@@ -1591,9 +1598,15 @@
                         <span class="stat-label">难度</span>
                         <span class="stat-value" id="end-difficulty">NORMAL</span>
                     </div>
+
                     <div class="stat-row">
                         <span class="stat-label">完成度</span>
                         <span class="stat-value" id="end-percentage">100%</span>
+                    </div>
+
+                    <div class="stat-row">
+                        <span class="stat-label">历史记录</span>
+                        <span class="stat-value" id="end-history">读取中...</span>
                     </div>
 
                     <p id="end-reason" class="flavor-text">所有威胁已消除</p>
@@ -1750,12 +1763,12 @@
         <div class="param-modal">
             <h3>覆写系统参数</h3>
             <div class="param-row">
-                <label>宽度 (8-256)</label>
-                <input type="number" id="manual-w" min="8" max="256">
+                <label>宽度 (8-128)</label>
+                <input type="number" id="manual-w" min="8" max="128">
             </div>
             <div class="param-row">
-                <label>高度 (8-256)</label>
-                <input type="number" id="manual-h" min="8" max="256">
+                <label>高度 (8-128)</label>
+                <input type="number" id="manual-h" min="8" max="128">
             </div>
             <div class="param-row">
                 <label>密度 (5-100%)</label>
@@ -3688,19 +3701,112 @@
             }
         }
 
+        // 1. 生成唯一的存储键名 (宽与高自动排序，确保 10x15 和 15x10 视为同一记录)
+        function getRecordKey(w, h, d) {
+            const min = Math.min(w, h);
+            const max = Math.max(w, h);
+            // key 格式示例: ms_rec_10_15_70
+            return `ms_rec_${min}_${max}_${d}`;
+        }
+
+        // 2. 读取记录
+        function loadRecord(key) {
+            const data = localStorage.getItem(key);
+            if (!data) return null;
+            try {
+                return JSON.parse(data);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // 3. 保存/更新记录 (仅在胜利时调用)
+        function saveWinRecord(w, h, d, timeInSeconds) {
+            const key = getRecordKey(w, h, d);
+            let record = loadRecord(key);
+
+            if (!record) {
+                // 初始化新记录
+                record = { wins: 0, bestTime: null };
+            }
+
+            // 增加通关次数
+            record.wins++;
+
+            // 更新最佳时间 (如果当前时间更短，或者之前没有最佳时间)
+            if (record.bestTime === null || timeInSeconds < record.bestTime) {
+                record.bestTime = timeInSeconds;
+            }
+
+            localStorage.setItem(key, JSON.stringify(record));
+            return record; // 返回更新后的数据
+        }
+
         function showGameOverCard(win) {
+            if (!isGameOver) return;
             // 准备界面数据
             const card = document.querySelector('.result-card');
             const title = document.getElementById('end-title');
             const timeDisplay = document.getElementById('end-time');
             const diffDisplay = document.getElementById('end-difficulty');
+            const historyDisplay = document.getElementById('end-history');
             const pctDisplay = document.getElementById('end-percentage');
             const reasonText = document.getElementById('end-reason');
             const overlay = document.getElementById('game-over-overlay');
 
             // 设置基本数据
             timeDisplay.textContent = formatTime(elapsedTime);
-            diffDisplay.textContent = `${CONFIG.gridW}x${CONFIG.gridH} (${Math.round(CONFIG.density * 100)}%)`;
+
+            // 3. 【核心修改】智能判断难度名称
+            const w = CONFIG.gridW;
+            const h = CONFIG.gridH;
+            const d = Math.round(CONFIG.density * 100);
+
+            let modeName = ""; // 默认名称
+
+            // 硬编码判定逻辑（比对宽高和密度）
+            // 普通: 10x10, 70%
+            if (d === 70 && w === 10 && h === 10) {
+                modeName = "普通协议";
+            }
+            // 终极: 30x30, 30%
+            else if (d === 30 && w === 30 && h === 30) {
+                modeName = "终极协议";
+            }
+            // 增强: 密度50%，尺寸是 15x20 或 20x15 (自适应)
+            else if (d === 50 && ((w === 15 && h === 20) || (w === 20 && h === 15))) {
+                modeName = "增强协议";
+            }
+
+            if (modeName == "")
+                diffDisplay.textContent = `${w}x${h}, ${d}%`;
+            else {
+                diffDisplay.textContent = `${modeName} (${w}x${h}, ${d}%)`;
+            }
+
+            let record = null;
+
+            if (win) {
+                // 如果赢了，先保存数据，再读取出来的就是最新数据
+                record = saveWinRecord(w, h, d, elapsedTime);
+            } else {
+                // 如果输了，只读取，不修改
+                const key = getRecordKey(w, h, d);
+                record = loadRecord(key);
+            }
+
+            // 格式化历史显示文本
+            if (record) {
+                // 有记录：显示通关次数和最佳时间
+                const bestTimeStr = formatTime(record.bestTime);
+                historyDisplay.textContent = `胜: ${record.wins} | 最佳: ${bestTimeStr}`;
+                // 给个高亮颜色，看起来更显眼
+                if (win) historyDisplay.style.color = "var(--neon-green)";
+            } else {
+                // 失败模式且无记录
+                historyDisplay.textContent = "无记录";
+                historyDisplay.style.color = "#666";
+            }
 
             // 移除旧主题
             card.classList.remove('win-theme', 'lose-theme');
@@ -3840,6 +3946,8 @@
                 PARAM_STATE.w = targetW;
                 PARAM_STATE.h = targetH;
                 PARAM_STATE.d = p.d;
+
+                clampParam();
                 syncSlidersFromState();
             }
         }
@@ -3962,6 +4070,8 @@
                         PARAM_STATE.w = w;
                         PARAM_STATE.h = h;
                         PARAM_STATE.d = d;
+
+                        clampParam();
                         syncSlidersFromState();
 
                         CONFIG.gridW = PARAM_STATE.w;
@@ -3979,12 +4089,18 @@
         }
 
         window.addEventListener('popstate', () => {
-            backToMenu();
-            // 重新解析当前 URL 并更新界面
-            loadSettingsFromURL();
+            const params = new URLSearchParams(window.location.search);
+
+            // 没有任何参数（? 后面是空的）
+            if ([...params.keys()].length === 0) {
+                backToMenu();
+            } else {
+                backToMenu();          // 先回到菜单，清理当前游戏状态
+                loadSettingsFromURL(); // 再根据 URL 恢复配置/自动开始
+            }
         });
 
-        function updateURLSettings(mode, w, h, d) {
+        function updateURLSettings(mode, w, h, d, pushOrReplace = true) {
             const currentUrl = window.location.pathname + window.location.search;
 
             const url = new URL(window.location.href);
@@ -4005,7 +4121,8 @@
             const nextUrl = url.pathname + url.search;
 
             if (nextUrl !== currentUrl) {
-                window.history.pushState({}, '', nextUrl);
+                if (pushOrReplace) window.history.pushState({}, '', nextUrl);
+                else window.history.replaceState({}, '', nextUrl);
             }
         }
 
@@ -4017,7 +4134,6 @@
                 window.history.pushState({}, '', cleanUrl);
             }
         }
-
 
         function setupUISounds() {
             // 1. 按钮、下拉框、头像链接
@@ -4110,9 +4226,9 @@
 
         // 打开弹窗：回显当前滑块的值
         document.getElementById('btn-open-param-input').addEventListener('click', () => {
-            manualW.value = inpW.value;
-            manualH.value = inpH.value;
-            manualD.value = inpD.value;
+            manualW.value = PARAM_STATE.w;
+            manualH.value = PARAM_STATE.h;
+            manualD.value = PARAM_STATE.d;
             paramOverlay.classList.remove('hidden');
             playSound('ui-click');
         });
@@ -4123,15 +4239,23 @@
             playSound('ui-click');
         });
 
+        function clampParam() {
+            PARAM_STATE.w = Math.max(8, Math.min(128, PARAM_STATE.w || 8));
+            PARAM_STATE.h = Math.max(8, Math.min(128, PARAM_STATE.h || 8));
+            PARAM_STATE.d = Math.max(5, Math.min(100, PARAM_STATE.d || 70));
+            const params = new URLSearchParams(window.location.search);
+
+            if ([...params.keys()].length != 0) 
+                updateURLSettings(diffSelect.value, PARAM_STATE.w, PARAM_STATE.h, PARAM_STATE.d, false);
+        }
+
         // 确认输入
         document.getElementById('btn-param-confirm').addEventListener('click', () => {
-            let w = Math.max(8, Math.min(256, parseInt(manualW.value) || 8));
-            let h = Math.max(8, Math.min(256, parseInt(manualH.value) || 8));
-            let d = Math.max(5, Math.min(100, parseInt(manualD.value) || 70));
+            PARAM_STATE.w = manualW.value;
+            PARAM_STATE.h = manualH.value;
+            PARAM_STATE.d = manualD.value;
 
-            PARAM_STATE.w = w;
-            PARAM_STATE.h = h;
-            PARAM_STATE.d = d;
+            clampParam();
 
             // slider 不扩范围，只做映射显示（越界就顶到边界）
             syncSlidersFromState();
